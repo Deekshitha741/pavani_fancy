@@ -751,3 +751,247 @@ input[type="file"]{display:none}
   .order-success-inner { padding: 2rem 1.5rem; }
   .success-steps { gap: 0; transform: scale(0.85); }
 }
+
+/* ═══════════════════════════════════════════
+   CART CHECKOUT BAR (profile page)
+   Add this to the bottom of style.css
+═══════════════════════════════════════════ */
+
+.cart-checkout-bar {
+  padding: 1.2rem 1.5rem 1.5rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.cart-checkout-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.2rem;
+}
+
+.cart-checkout-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.cart-checkout-total {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-primary);
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  margin-top: 0.2rem;
+}
+
+.free-shipping-tag {
+  color: #66bb6a;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.cart-grand-total {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 1.05rem;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.cart-checkout-btn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background: var(--gold-gradient);
+  color: var(--bg-primary);
+  border-radius: 18px;
+  text-decoration: none;
+  transition: all 0.3s;
+  box-shadow: 0 6px 30px rgba(201,168,76,0.25);
+  margin-bottom: 0.8rem;
+}
+
+.cart-checkout-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 40px rgba(201,168,76,0.3);
+}
+
+.cart-checkout-btn-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.cart-checkout-btn-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.cart-checkout-btn-main {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--bg-primary);
+}
+
+.cart-checkout-btn-sub {
+  font-size: 0.72rem;
+  opacity: 0.8;
+  margin-top: 0.1rem;
+  color: var(--bg-primary);
+}
+
+.cart-checkout-btn-arrow {
+  font-size: 1rem;
+  flex-shrink: 0;
+  color: var(--bg-primary);
+}
+
+.cart-checkout-note {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.cart-checkout-note i {
+  color: var(--gold);
+  margin-right: 0.2rem;
+}
+/* ═══════════════════════════════════════════
+   CART CHECKOUT BAR (profile page)
+   Add this to the bottom of style.css
+═══════════════════════════════════════════ */
+
+.cart-checkout-bar {
+  padding: 1.2rem 1.5rem 1.5rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.cart-checkout-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.2rem;
+}
+
+.cart-checkout-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.cart-checkout-total {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-primary);
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  margin-top: 0.2rem;
+}
+
+.free-shipping-tag {
+  color: #66bb6a;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.cart-grand-total {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 1.05rem;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.cart-checkout-btn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background: var(--gold-gradient);
+  color: var(--bg-primary);
+  border-radius: 18px;
+  text-decoration: none;
+  transition: all 0.3s;
+  box-shadow: 0 6px 30px rgba(201,168,76,0.25);
+  margin-bottom: 0.8rem;
+}
+
+.cart-checkout-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 40px rgba(201,168,76,0.3);
+}
+
+.cart-checkout-btn-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.cart-checkout-btn-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.cart-checkout-btn-main {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--bg-primary);
+}
+
+.cart-checkout-btn-sub {
+  font-size: 0.72rem;
+  opacity: 0.8;
+  margin-top: 0.1rem;
+  color: var(--bg-primary);
+}
+
+.cart-checkout-btn-arrow {
+  font-size: 1rem;
+  flex-shrink: 0;
+  color: var(--bg-primary);
+}
+
+.cart-checkout-note {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.cart-checkout-note i {
+  color: var(--gold);
+  margin-right: 0.2rem;
+}
+
+/* ═══════════════════════════════════════════
+   ORDER HISTORY - profile + admin
+═══════════════════════════════════════════ */
+
+/* Admin pending orders alert pulse */
+@keyframes alertPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.pending-alert { animation: alertPulse 2s infinite; }
+
+/* Admin order detail responsive */
+@media (max-width: 900px) {
+  div[style*="grid-template-columns:1.2fr 0.8fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+

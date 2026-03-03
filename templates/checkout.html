@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+{% block title %}Checkout — Sri Pavani{% endblock %}
+{% block content %}
+
+<div data-logged-in="true">
+
+<!-- Page Header -->
+<div style="background:var(--ombre-hero);padding:2.5rem 2rem 2rem;text-align:center;border-bottom:1px solid var(--border)">
+  <span class="section-eyebrow">Almost There</span>
+  <h1 class="section-title">Checkout</h1>
+  <div class="section-divider"></div>
+</div>
+
+<div class="checkout-page">
+
+  {% if not cart_items %}
+  <div style="text-align:center;padding:5rem 2rem;color:var(--text-muted)">
+    <i class="fas fa-shopping-bag" style="font-size:3rem;color:var(--gold);opacity:.4;margin-bottom:1rem;display:block"></i>
+    <p style="margin-bottom:1.5rem">Your cart is empty. Add some products first!</p>
+    <a href="{{ url_for('index') }}" class="btn-gold" style="display:inline-block">Start Shopping ✦</a>
+  </div>
+  {% else %}
+
+  <div class="checkout-grid">
+
+    <!-- LEFT: Cart Items + Delivery + Payment -->
+    <div>
+
+      <!-- ── CART ITEMS ── -->
+      <div class="checkout-card" style="margin-bottom:1.5rem">
+        <div class="checkout-card-header">
+          <h3><i class="fas fa-shopping-bag"></i> Your Order</h3>
+          <span class="item-count-badge">{{ cart_items|length }} item{{ 's' if cart_items|length != 1 }}</span>
+        </div>
+        <div class="checkout-items">
+          {% for item in cart_items %}
+          <div class="checkout-item">
+            <div class="checkout-item-img">
+              {% if item.product.image %}
+                <img src="{{ url_for('static', filename=item.product.image) }}" alt="{{ item.product.name }}"/>
+              {% else %}
+                <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--gold)">
+                  <i class="fas fa-gem"></i>
+                </div>
+              {% endif %}
+            </div>
+            <div class="checkout-item-info">
+              <div class="checkout-item-name">{{ item.product.name }}</div>
+              <div class="checkout-item-meta">1 Gram Gold · {{ item.product.weight }}g</div>
+              <div class="checkout-item-qty">Qty: {{ item.quantity }}</div>
+            </div>
+            <div class="checkout-item-price">₹{{ "%.0f"|format(item.product.price * item.quantity) }}</div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Totals -->
+        <div class="checkout-totals">
+          <div class="total-row">
+            <span>Subtotal</span>
+            <span>₹{{ "%.0f"|format(total) }}</span>
+          </div>
+          <div class="total-row">
+            <span>Shipping</span>
+            <span class="free-tag"><i class="fas fa-truck"></i> FREE</span>
+          </div>
+          <div class="total-row total-row-main">
+            <span>Total Payable</span>
+            <span class="total-amount">₹{{ "%.0f"|format(total) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── DELIVERY ADDRESS ── -->
+      <div class="checkout-card" style="margin-bottom:1.5rem" id="deliveryCard">
+        <div class="checkout-card-header">
+          <h3><i class="fas fa-map-marker-alt"></i> Delivery Address</h3>
+          <button class="edit-addr-link" onclick="toggleEditAddress()" id="editAddrBtn">
+            <i class="fas fa-edit"></i> Edit
+          </button>
+        </div>
+
+        <!-- Address Display View -->
+        <div style="padding:1.2rem 1.4rem" id="addrDisplay">
+          {% if current_user.address or current_user.city %}
+          <div class="addr-name">{{ current_user.name }}</div>
+          <div class="addr-details">
+            {{ current_user.address or '' }}{% if current_user.address and current_user.city %},<br>{% endif %}
+            {{ current_user.city or '' }}{% if current_user.city and current_user.state %}, {{ current_user.state }}{% endif %}{% if current_user.pincode %} — {{ current_user.pincode }}{% endif %}
+          </div>
+          {% if current_user.phone %}
+          <div class="addr-phone"><i class="fas fa-phone" style="color:var(--gold);margin-right:.4rem;font-size:.75rem"></i>{{ current_user.phone }}</div>
+          {% endif %}
+          {% else %}
+          <div style="color:var(--text-muted);font-size:.85rem;display:flex;align-items:center;gap:.5rem">
+            <i class="fas fa-exclamation-circle" style="color:#ffb74d"></i>
+            No delivery address saved. Please add your address below.
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Address Edit Form (hidden by default) -->
+        <div style="padding:1rem 1.4rem;display:none;border-top:1px solid var(--border)" id="addrEditForm">
+          <p style="font-size:.78rem;color:var(--text-muted);margin-bottom:1rem">
+            <i class="fas fa-info-circle" style="color:var(--gold)"></i>
+            Changes here will also update your profile address.
+          </p>
+          <form method="POST" action="{{ url_for('update_delivery_address') }}" id="addrForm">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+              <div class="form-group" style="margin-bottom:.5rem">
+                <label style="font-size:.72rem">Full Name</label>
+                <input type="text" name="name" value="{{ current_user.name }}" required
+                  style="padding:.6rem .9rem;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-family:'Josefin Sans',sans-serif;font-size:.85rem;width:100%;outline:none"/>
+              </div>
+              <div class="form-group" style="margin-bottom:.5rem">
+                <label style="font-size:.72rem">Phone Number</label>
+                <input type="tel" name="phone" value="{{ current_user.phone or '' }}"
+                  style="padding:.6rem .9rem;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-family:'Josefin Sans',sans-serif;font-size:.85rem;width:100%;outline:none"/>
+              </div>
+              <div class="form-group" style="grid-column:1/-1;margin-bottom:.5rem">
+                <label style="font-size:.72rem">Street Address</label>
+                <textarea name="address" rows="2"
+                  style="padding:.6rem .9rem;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-family:'Josefin Sans',sans-serif;font-size:.85rem;width:100%;outline:none;resize:none">{{ current_user.address or '' }}</textarea>
+              </div>
+              <div class="form-group" style="margin-bottom:.5rem">
+                <label style="font-size:.72rem">City</label>
+                <input type="text" name="city" value="{{ current_user.city or '' }}"
+                  style="padding:.6rem .9rem;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-family:'Josefin Sans',sans-serif;font-size:.85rem;width:100%;outline:none"/>
+              </div>
+              <div class="form-group" style="margin-bottom:.5rem">
+                <label style="font-size:.72rem">Pincode</label>
+                <input type="text" name="pincode" value="{{ current_user.pincode or '' }}"
+                  style="padding:.6rem .9rem;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-family:'Josefin Sans',sans-serif;font-size:.85rem;width:100%;outline:none"/>
+              </div>
+              <div class="form-group" style="margin-bottom:.5rem">
+                <label style="font-size:.72rem">State</label>
+                <select name="state"
+                  style="padding:.6rem .9rem;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-family:'Josefin Sans',sans-serif;font-size:.85rem;width:100%;outline:none">
+                  {% for s in ['Andhra Pradesh','Telangana','Tamil Nadu','Karnataka','Kerala','Maharashtra','Gujarat','Rajasthan','Delhi','Other'] %}
+                  <option value="{{ s }}" {{ 'selected' if current_user.state == s }}>{{ s }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div style="display:flex;gap:.7rem;margin-top:.8rem">
+              <button type="submit" class="btn-gold" style="padding:.6rem 1.5rem;font-size:.82rem">
+                <i class="fas fa-save"></i> Save Address
+              </button>
+              <button type="button" onclick="toggleEditAddress()" class="btn-outline" style="padding:.6rem 1.2rem;font-size:.82rem">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ── PAYMENT OPTIONS ── -->
+      <div class="checkout-card">
+        <div class="checkout-card-header">
+          <h3><i class="fas fa-lock"></i> Payment Method</h3>
+        </div>
+
+        <div class="payment-options-list">
+
+          <!-- UPI -->
+          <div class="payment-option selected" onclick="selectPayment('upi', this)">
+            <input type="radio" name="payment_method" value="upi" checked style="display:none"/>
+            <div class="payment-option-icon">📱</div>
+            <div class="payment-option-body">
+              <div class="payment-option-name">UPI Payment</div>
+              <div class="payment-option-desc">Google Pay, PhonePe, Paytm, BHIM & more</div>
+            </div>
+            <i class="fas fa-check-circle payment-option-check"></i>
+          </div>
+
+          <!-- Net Banking -->
+          <div class="payment-option" onclick="selectPayment('netbanking', this)">
+            <input type="radio" name="payment_method" value="netbanking" style="display:none"/>
+            <div class="payment-option-icon">🏦</div>
+            <div class="payment-option-body">
+              <div class="payment-option-name">Net Banking</div>
+              <div class="payment-option-desc">All major Indian banks supported</div>
+            </div>
+            <i class="fas fa-check-circle payment-option-check"></i>
+          </div>
+
+          <!-- Credit / Debit Card -->
+          <div class="payment-option" onclick="selectPayment('card', this)">
+            <input type="radio" name="payment_method" value="card" style="display:none"/>
+            <div class="payment-option-icon">💳</div>
+            <div class="payment-option-body">
+              <div class="payment-option-name">Credit / Debit Card</div>
+              <div class="payment-option-desc">Visa, Mastercard, RuPay accepted</div>
+            </div>
+            <i class="fas fa-check-circle payment-option-check"></i>
+          </div>
+
+          <!-- Cash on Delivery -->
+          <div class="payment-option" onclick="selectPayment('cod', this)">
+            <input type="radio" name="payment_method" value="cod" style="display:none"/>
+            <div class="payment-option-icon">💵</div>
+            <div class="payment-option-body">
+              <div class="payment-option-name">Cash on Delivery</div>
+              <div class="payment-option-desc">Pay when your order arrives</div>
+            </div>
+            <i class="fas fa-check-circle payment-option-check"></i>
+          </div>
+
+        </div>
+
+        <!-- Payment Detail Panels -->
+        <div class="payment-details-wrap">
+
+          <!-- UPI details -->
+          <div class="payment-details" data-method="upi" style="display:block">
+            <div class="upi-apps">
+              <span>Popular UPI apps</span>
+              <div class="upi-app-pills">
+                <span class="upi-pill">📱 GPay</span>
+                <span class="upi-pill">📱 PhonePe</span>
+                <span class="upi-pill">📱 Paytm</span>
+                <span class="upi-pill">📱 BHIM</span>
+              </div>
+            </div>
+            <div class="payment-info-box" style="margin-top:.8rem">
+              <i class="fas fa-info-circle"></i>
+              <span>You'll receive a UPI payment request on your phone after placing the order. Complete the payment within 10 minutes to confirm your order.</span>
+            </div>
+          </div>
+
+          <!-- Net Banking details -->
+          <div class="payment-details" data-method="netbanking" style="display:none">
+            <div class="payment-info-box">
+              <i class="fas fa-university"></i>
+              <span>You'll be redirected to your bank's secure payment page. Make sure to complete the payment and return to confirm your order.</span>
+            </div>
+          </div>
+
+          <!-- Card details -->
+          <div class="payment-details" data-method="card" style="display:none">
+            <div style="display:grid;gap:.7rem;margin-bottom:.8rem">
+              <div>
+                <label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.3rem">Card Number</label>
+                <input type="text" placeholder="1234 5678 9012 3456" maxlength="19"
+                  style="width:100%;padding:.65rem .9rem;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-family:'Josefin Sans',sans-serif;font-size:.85rem;outline:none"
+                  oninput="formatCard(this)"/>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem">
+                <div>
+                  <label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.3rem">Expiry (MM/YY)</label>
+                  <input type="text" placeholder="MM / YY" maxlength="7"
+                    style="width:100%;padding:.65rem .9rem;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-family:'Josefin Sans',sans-serif;font-size:.85rem;outline:none"
+                    oninput="formatExpiry(this)"/>
+                </div>
+                <div>
+                  <label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.3rem">CVV</label>
+                  <input type="password" placeholder="•••" maxlength="4"
+                    style="width:100%;padding:.65rem .9rem;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-family:'Josefin Sans',sans-serif;font-size:.85rem;outline:none"/>
+                </div>
+              </div>
+              <div>
+                <label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.3rem">Name on Card</label>
+                <input type="text" placeholder="As printed on card"
+                  style="width:100%;padding:.65rem .9rem;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-family:'Josefin Sans',sans-serif;font-size:.85rem;outline:none"/>
+              </div>
+            </div>
+            <div class="payment-info-box">
+              <i class="fas fa-shield-alt"></i>
+              <span>Your card details are encrypted with 256-bit SSL security. We never store card information.</span>
+            </div>
+          </div>
+
+          <!-- COD details -->
+          <div class="payment-details" data-method="cod" style="display:none">
+            <div class="payment-info-box">
+              <i class="fas fa-truck"></i>
+              <span>Pay in cash when your order arrives at your doorstep. Please keep exact change ready. COD charges: <strong style="color:var(--gold)">FREE</strong></span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT: Order Summary + Place Order -->
+    <div>
+      <!-- Order Summary Sticky Card -->
+      <div class="checkout-card" style="position:sticky;top:90px">
+        <div class="checkout-card-header">
+          <h3><i class="fas fa-receipt"></i> Order Summary</h3>
+        </div>
+
+        <div style="padding:1rem 1.4rem">
+
+          <!-- Mini item list -->
+          <div style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1rem;max-height:200px;overflow-y:auto">
+            {% for item in cart_items %}
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:.82rem">
+              <div style="display:flex;align-items:center;gap:.6rem;flex:1">
+                <div style="width:32px;height:38px;border-radius:6px;overflow:hidden;background:var(--bg-secondary);flex-shrink:0">
+                  {% if item.product.image %}
+                    <img src="{{ url_for('static', filename=item.product.image) }}" style="width:100%;height:100%;object-fit:cover"/>
+                  {% else %}
+                    <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:.6rem"><i class="fas fa-gem"></i></div>
+                  {% endif %}
+                </div>
+                <span style="color:var(--text-secondary);line-height:1.3">{{ item.product.name }}<br><span style="color:var(--text-muted);font-size:.7rem">x{{ item.quantity }}</span></span>
+              </div>
+              <span style="color:var(--gold);font-weight:700;font-size:.85rem;margin-left:.5rem">₹{{ "%.0f"|format(item.product.price * item.quantity) }}</span>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div style="border-top:1px solid var(--border);padding-top:1rem;display:flex;flex-direction:column;gap:.5rem">
+            <div style="display:flex;justify-content:space-between;font-size:.82rem;color:var(--text-secondary)">
+              <span>Subtotal</span><span>₹{{ "%.0f"|format(total) }}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.82rem;color:var(--text-secondary)">
+              <span>Shipping</span><span class="free-tag"><i class="fas fa-truck"></i> FREE</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:1rem;font-weight:700;padding-top:.5rem;border-top:1px solid var(--border)">
+              <span style="color:var(--text-primary)">Total</span>
+              <span class="total-amount">₹{{ "%.0f"|format(total) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delivery address mini preview -->
+        <div style="margin:0 1.4rem 1rem;background:rgba(201,168,76,0.06);border:1px solid var(--border-gold);border-radius:12px;padding:.8rem 1rem;font-size:.78rem">
+          <div style="color:var(--gold);font-weight:700;margin-bottom:.3rem;font-size:.7rem;letter-spacing:.05em;text-transform:uppercase">
+            <i class="fas fa-map-marker-alt"></i> Delivering to
+          </div>
+          <div style="color:var(--text-secondary);line-height:1.5">
+            {% if current_user.address or current_user.city %}
+              {{ current_user.name }} · {{ current_user.city or '' }}{% if current_user.state %}, {{ current_user.state }}{% endif %}
+            {% else %}
+              <span style="color:#ffb74d"><i class="fas fa-exclamation-triangle"></i> Add address before placing order</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Trust badges -->
+        <div class="trust-badges" style="padding:0 1rem .5rem">
+          <span class="trust-badge"><i class="fas fa-shield-alt"></i> Secure</span>
+          <span class="trust-badge"><i class="fas fa-undo"></i> 7-Day Returns</span>
+          <span class="trust-badge"><i class="fas fa-truck"></i> Free Delivery</span>
+        </div>
+
+        <!-- Place Order Button -->
+        <div style="padding:.5rem 1.4rem 1.4rem">
+          <form method="POST" action="{{ url_for('place_order') }}" id="placeOrderForm">
+            <input type="hidden" name="payment_method" id="selectedPaymentMethod" value="upi"/>
+            <button type="submit" class="place-order-btn" id="placeOrderBtn"
+              onclick="document.getElementById('selectedPaymentMethod').value = document.querySelector('.payment-option.selected input').value">
+              <span class="place-order-icon">✦</span>
+              Place Order · ₹{{ "%.0f"|format(total) }}
+              <i class="fas fa-arrow-right place-order-arrow"></i>
+            </button>
+          </form>
+          <p class="checkout-note">
+            By placing your order you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a>
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+  {% endif %}
+
+</div>
+</div>
+
+<script>
+function toggleEditAddress() {
+  const display = document.getElementById('addrDisplay');
+  const form = document.getElementById('addrEditForm');
+  const btn = document.getElementById('editAddrBtn');
+  const isHidden = form.style.display === 'none';
+  form.style.display = isHidden ? 'block' : 'none';
+  btn.innerHTML = isHidden
+    ? '<i class="fas fa-times"></i> Cancel'
+    : '<i class="fas fa-edit"></i> Edit';
+}
+
+function formatCard(input) {
+  let v = input.value.replace(/\D/g, '').substring(0, 16);
+  input.value = v.replace(/(.{4})/g, '$1 ').trim();
+}
+
+function formatExpiry(input) {
+  let v = input.value.replace(/\D/g, '').substring(0, 4);
+  if (v.length >= 2) v = v.substring(0,2) + ' / ' + v.substring(2);
+  input.value = v;
+}
+</script>
+{% endblock %}

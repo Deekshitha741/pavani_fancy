@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Order Placed — Sri Pavani{% endblock %}
+{% block content %}
+
+<div class="order-success-page">
+  <div class="order-success-inner">
+
+    <div class="success-animation">
+      <div class="success-circle">
+        <span class="success-star">✦</span>
+      </div>
+    </div>
+
+    <h2 class="success-title">Order Placed!</h2>
+    <p class="success-subtitle">Your jewellery is on its way to you</p>
+
+    <!-- Order # + smart amount label -->
+    <div class="success-amount">
+      <span class="success-amount-label">Order #{{ order.order_number }}</span>
+      {% if order.payment_method == 'cod' %}
+        <span class="success-amount-value" style="-webkit-text-fill-color:#ffb74d;background:none;color:#ffb74d">
+          &#8377;{{ "%.0f"|format(total) }} — Pay on Delivery
+        </span>
+      {% else %}
+        <span class="success-amount-value">&#8377;{{ "%.0f"|format(total) }} Paid</span>
+      {% endif %}
+    </div>
+
+    <!-- Payment Method Info -->
+    <div class="success-payment-info">
+      <div class="success-info-card">
+        {% if order.payment_method == 'upi' %}
+        <span class="sic-icon">📱</span>
+        <div>
+          <div class="sic-title">UPI Payment Initiated</div>
+          <div class="sic-desc">Check your UPI app for the payment request. Complete it within 10 minutes to confirm your order.</div>
+        </div>
+        {% elif order.payment_method == 'netbanking' %}
+        <span class="sic-icon">🏦</span>
+        <div>
+          <div class="sic-title">Net Banking Payment</div>
+          <div class="sic-desc">Your bank will process the payment shortly. You'll receive a confirmation once it's done.</div>
+        </div>
+        {% elif order.payment_method == 'card' %}
+        <span class="sic-icon">💳</span>
+        <div>
+          <div class="sic-title">Card Payment Received</div>
+          <div class="sic-desc">Payment of &#8377;{{ "%.0f"|format(total) }} processed. Your order is confirmed and being prepared.</div>
+        </div>
+        {% else %}
+        <span class="sic-icon">💵</span>
+        <div>
+          <div class="sic-title">Cash on Delivery Confirmed</div>
+          <div class="sic-desc">
+            Please keep <strong style="color:var(--gold)">&#8377;{{ "%.0f"|format(total) }}</strong> ready when your order arrives.
+            Our delivery partner will collect payment at your doorstep — no payment needed now.
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Estimated delivery block -->
+    <div style="background:rgba(201,168,76,.07);border:1px solid var(--border-gold);border-radius:14px;padding:.9rem 1.2rem;margin-bottom:1.5rem;text-align:left">
+      <div style="font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem">Estimated Delivery</div>
+      <div style="font-size:.9rem;font-weight:700;color:var(--gold)">
+        <i class="fas fa-truck" style="margin-right:.4rem"></i>{{ order.estimated_delivery }}
+      </div>
+    </div>
+
+    <!-- WhatsApp admin notification badge -->
+    {% if wa_url %}
+    <div style="background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.3);border-radius:12px;padding:.7rem 1rem;margin-bottom:1.2rem;font-size:.78rem;color:#25d366;display:flex;align-items:center;gap:.6rem">
+      <i class="fab fa-whatsapp" style="font-size:1.1rem"></i>
+      <span>Admin has been notified via WhatsApp</span>
+    </div>
+    {% endif %}
+
+    <!-- Order Progress Steps -->
+    <div class="success-steps">
+      <div class="step-item done">
+        <div class="step-dot"><i class="fas fa-check"></i></div>
+        <span>Ordered</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-item active">
+        <div class="step-dot"><i class="fas fa-box"></i></div>
+        <span>Processing</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-item">
+        <div class="step-dot"><i class="fas fa-truck"></i></div>
+        <span>Shipped</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-item">
+        <div class="step-dot"><i class="fas fa-home"></i></div>
+        <span>Delivered</span>
+      </div>
+    </div>
+
+    <div class="success-actions">
+      <a href="{{ url_for('index') }}" class="btn-gold">
+        <i class="fas fa-home"></i> Continue Shopping
+      </a>
+      <a href="{{ url_for('profile') }}" class="btn-outline">
+        <i class="fas fa-user"></i> My Profile
+      </a>
+    </div>
+
+    <p style="font-size:.75rem;color:var(--text-muted);line-height:1.6">
+      <i class="fas fa-envelope" style="color:var(--gold)"></i>
+      Order confirmation will be sent to <strong>{{ current_user.email }}</strong>
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

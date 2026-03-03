@@ -10,15 +10,10 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
 </head>
 <body>
-
-<!-- TOP BAR -->
 <header class="top-bar">
   <a href="{{ url_for('index') }}" class="logo">
     <span class="logo-icon">✦</span>
-    <div class="logo-text">
-      <span class="logo-main">SRI PAVANI</span>
-      <span class="logo-sub">ADMIN PANEL</span>
-    </div>
+    <div class="logo-text"><span class="logo-main">SRI PAVANI</span><span class="logo-sub">ADMIN PANEL</span></div>
   </a>
   <div class="top-bar-right">
     <button class="theme-toggle" id="themeToggle"><i class="fas fa-sun" id="themeIcon"></i></button>
@@ -26,80 +21,49 @@
     <a href="{{ url_for('logout') }}" class="auth-btn"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></a>
   </div>
 </header>
-
-<!-- Admin overlay for mobile sidebar -->
 <div class="admin-overlay" id="adminOverlay"></div>
-
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     <div class="flash-container">
       {% for cat, msg in messages %}
         <div class="flash-msg flash-{{ cat }}">
           <i class="fas fa-{{ 'check-circle' if cat == 'success' else 'exclamation-circle' }}"></i>
-          {{ msg }}<button onclick="this.parentElement.remove()">×</button>
+          {{ msg }}<button onclick="this.parentElement.remove()">x</button>
         </div>
       {% endfor %}
     </div>
   {% endif %}
 {% endwith %}
-
 <main style="padding-top:70px">
   <div class="admin-wrapper">
-    <!-- Sidebar -->
     <aside class="admin-sidebar" id="adminSidebar">
-      <!-- Mobile header inside sidebar -->
       <div class="admin-sidebar-header">
-        <span class="sidebar-brand">✦ SRI PAVANI</span>
+        <span class="sidebar-brand">SRI PAVANI</span>
         <button class="admin-close-btn" id="adminCloseBtn"><i class="fas fa-times"></i></button>
       </div>
-
       <div style="padding:1rem 1.5rem 1.5rem;border-bottom:1px solid var(--border);margin-bottom:1rem">
         <a href="{{ url_for('index') }}" class="logo">
           <span class="logo-icon" style="font-size:1.3rem">✦</span>
-          <div class="logo-text">
-            <span class="logo-main" style="font-size:.85rem">ADMIN</span>
-            <span class="logo-sub">SRI PAVANI</span>
-          </div>
+          <div class="logo-text"><span class="logo-main" style="font-size:.85rem">ADMIN</span><span class="logo-sub">SRI PAVANI</span></div>
         </a>
       </div>
-
       <nav class="admin-nav">
-        <a href="{{ url_for('admin_dashboard') }}" class="{{ 'active' if request.endpoint == 'admin_dashboard' }}">
-          <i class="fas fa-chart-pie"></i> Dashboard
-        </a>
-        <a href="{{ url_for('admin_categories') }}" class="{{ 'active' if request.endpoint == 'admin_categories' }}">
-          <i class="fas fa-th-large"></i> Categories
-        </a>
-        <a href="{{ url_for('admin_products') }}" class="{{ 'active' if request.endpoint == 'admin_products' }}">
-          <i class="fas fa-gem"></i> Products
-        </a>
-        <a href="{{ url_for('admin_offers') }}" class="{{ 'active' if request.endpoint == 'admin_offers' }}">
-          <i class="fas fa-tags"></i> Offers & Banners
-        </a>
-        <a href="{{ url_for('admin_customers') }}" class="{{ 'active' if request.endpoint == 'admin_customers' }}">
-          <i class="fas fa-users"></i> Customers
-        </a>
-        <a href="{{ url_for('index') }}">
-          <i class="fas fa-eye"></i> View Site
-        </a>
-        <a href="{{ url_for('logout') }}" style="color:#e57373">
-          <i class="fas fa-sign-out-alt"></i> Logout
-        </a>
+        <a href="{{ url_for('admin_dashboard') }}" class="{{ 'active' if request.endpoint == 'admin_dashboard' }}"><i class="fas fa-chart-pie"></i> Dashboard</a>
+        <a href="{{ url_for('admin_orders') }}" class="{{ 'active' if request.endpoint in ['admin_orders','admin_order_detail'] }}"><i class="fas fa-shopping-bag"></i> Orders</a>
+        <a href="{{ url_for('admin_categories') }}" class="{{ 'active' if request.endpoint == 'admin_categories' }}"><i class="fas fa-th-large"></i> Categories</a>
+        <a href="{{ url_for('admin_products') }}" class="{{ 'active' if request.endpoint == 'admin_products' }}"><i class="fas fa-gem"></i> Products</a>
+        <a href="{{ url_for('admin_offers') }}" class="{{ 'active' if request.endpoint == 'admin_offers' }}"><i class="fas fa-tags"></i> Offers</a>
+        <a href="{{ url_for('admin_customers') }}" class="{{ 'active' if request.endpoint == 'admin_customers' }}"><i class="fas fa-users"></i> Customers</a>
+        <a href="{{ url_for('index') }}"><i class="fas fa-eye"></i> View Site</a>
+        <a href="{{ url_for('logout') }}" style="color:#e57373"><i class="fas fa-sign-out-alt"></i> Logout</a>
       </nav>
     </aside>
-
-    <!-- Main Content -->
     <div class="admin-main">
-      <!-- Mobile hamburger button -->
-      <button class="admin-hamburger-btn" id="adminHamburger">
-        <i class="fas fa-bars"></i> Menu
-      </button>
-
+      <button class="admin-hamburger-btn" id="adminHamburger"><i class="fas fa-bars"></i> Menu</button>
       {% block content %}{% endblock %}
     </div>
   </div>
 </main>
-
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

@@ -1,0 +1,125 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Products — Admin{% endblock %}
+{% block content %}
+
+<h1 class="admin-page-title">✦ Products</h1>
+
+<!-- Add Product -->
+<div class="admin-card">
+  <div class="admin-card-header"><h3><i class="fas fa-plus"></i> Add New Product</h3></div>
+  <div class="admin-card-body">
+    <form method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="action" value="add"/>
+      <div class="admin-form-grid">
+        <div class="form-group">
+          <label>Product Name *</label>
+          <input type="text" name="name" placeholder="e.g. Classic Gold Necklace" required/>
+        </div>
+        <div class="form-group">
+          <label>Category *</label>
+          <select name="category_id" required>
+            <option value="">-- Select Category --</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Price (₹) *</label>
+          <input type="number" name="price" placeholder="5999" min="0" step="0.01" required/>
+        </div>
+        <div class="form-group">
+          <label>Weight (grams)</label>
+          <input type="number" name="weight" value="1" min="0.1" step="0.1"/>
+        </div>
+        <div class="form-group full-width">
+          <label>Description</label>
+          <textarea name="description" rows="2" placeholder="Describe the product..."></textarea>
+        </div>
+        <div class="form-group full-width">
+          <label>Product Image (PNG/JPG/PDF)</label>
+          <label class="file-upload-area" for="prod-img">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>Click to upload product image</p>
+          </label>
+          <input type="file" id="prod-img" name="image" accept="image/*,.pdf"
+            onchange="this.previousElementSibling.querySelector('p').textContent=this.files[0]?.name||'Click to upload'"/>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
+            <label class="checkbox-group">
+              <input type="checkbox" name="is_new_collection"/>
+              <span>Mark as New Collection</span>
+            </label>
+            <label class="checkbox-group">
+              <input type="checkbox" name="is_best_seller"/>
+              <span>Mark as Best Seller</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <button type="submit" class="btn-gold" style="padding:0.7rem 2rem;margin-top:0.5rem">
+        <i class="fas fa-plus"></i> Add Product
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Products Table -->
+<div class="admin-card">
+  <div class="admin-card-header"><h3>All Products ({{ products|length }})</h3></div>
+  <div style="overflow-x:auto">
+    <table class="admin-table">
+      <thead>
+        <tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Tags</th><th>Stock</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for product in products %}
+        <tr>
+          <td>
+            <div class="product-thumb">
+              {% if product.image %}<img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }}"/>
+              {% else %}<i class="fas fa-gem"></i>{% endif %}
+            </div>
+          </td>
+          <td>
+            <strong>{{ product.name }}</strong>
+            {% if product.description %}
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">{{ product.description[:50] }}...</div>
+            {% endif %}
+          </td>
+          <td><span class="tag tag-gold">{{ product.category.name }}</span></td>
+          <td style="font-weight:700;color:var(--gold)">₹{{ "%.0f"|format(product.price) }}</td>
+          <td>
+            {% if product.is_new_collection %}<span class="tag tag-active" style="display:block;margin-bottom:2px">New</span>{% endif %}
+            {% if product.is_best_seller %}<span class="tag" style="background:rgba(255,183,77,0.2);color:#ffb74d;display:block">Best Seller</span>{% endif %}
+          </td>
+          <td>
+            <span class="tag {{ 'tag-inactive' if product.is_stock_out else 'tag-active' }}">
+              {{ 'Out of Stock' if product.is_stock_out else 'In Stock' }}
+            </span>
+          </td>
+          <td>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+              <form method="POST" style="display:inline">
+                <input type="hidden" name="action" value="toggle_stock"/>
+                <input type="hidden" name="product_id" value="{{ product.id }}"/>
+                <button type="submit" class="btn-sm btn-warning" title="Toggle Stock">
+                  {{ 'Mark In Stock' if product.is_stock_out else 'Mark Out of Stock' }}
+                </button>
+              </form>
+              <form method="POST" style="display:inline" onsubmit="return confirm('Delete this product?')">
+                <input type="hidden" name="action" value="delete"/>
+                <input type="hidden" name="product_id" value="{{ product.id }}"/>
+                <button type="submit" class="btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

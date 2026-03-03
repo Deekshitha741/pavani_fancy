@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}All Products — Sri Pavani{% endblock %}
+{% block content %}
+<div data-logged-in="{{ 'true' if current_user.is_authenticated else 'false' }}">
+<div style="background:var(--ombre-hero);padding:3rem 2rem;text-align:center;border-bottom:1px solid var(--border)">
+  <span class="section-eyebrow">Our Collection</span>
+  <h1 class="section-title">All Jewellery</h1>
+  <div class="section-divider"></div>
+</div>
+
+<div style="max-width:1200px;margin:0 auto;padding:2.5rem 2rem">
+  <!-- Category filter -->
+  <div style="display:flex;gap:0.7rem;flex-wrap:wrap;margin-bottom:2rem">
+    <a href="{{ url_for('all_products') }}" class="nav-pill active">All</a>
+    {% for cat in categories %}
+    <a href="{{ url_for('category_page', category_id=cat.id) }}" class="nav-pill">{{ cat.name }}</a>
+    {% endfor %}
+  </div>
+
+  {% if products %}
+  <div class="products-grid">
+    {% for product in products %}
+    {% include "components/product_card.html" %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:5rem 2rem;color:var(--text-muted)">
+    <p>No products available. Please check back soon!</p>
+  </div>
+  {% endif %}
+</div>
+</div>
+{% endblock %}

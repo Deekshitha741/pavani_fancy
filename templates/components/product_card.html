@@ -1,0 +1,45 @@
+<div class="product-card" data-product-id="{{ product.id }}">
+  <div class="product-img-wrap">
+    {% if product.image %}
+      <img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }}"/>
+    {% else %}
+      <div class="product-no-img">
+        <i class="fas fa-gem"></i>
+        <span style="font-size:0.7rem;color:var(--gold)">Sri Pavani</span>
+      </div>
+    {% endif %}
+
+    {% if product.is_new_collection %}
+      <span class="product-badge">NEW</span>
+    {% elif product.is_best_seller %}
+      <span class="product-badge">BESTSELLER</span>
+    {% endif %}
+
+    {% if product.is_stock_out %}
+      <div class="stock-badge">OUT OF STOCK</div>
+    {% endif %}
+  </div>
+
+  <div class="product-info">
+    <div class="product-name">{{ product.name }}</div>
+    <div class="product-weight">1 Gram Gold • {{ product.weight }}g</div>
+    <div class="product-footer">
+      <div class="product-price">₹{{ "%.0f"|format(product.price) }}</div>
+      <div class="cart-controls">
+        {% if not product.is_stock_out %}
+        <div class="qty-wrap" id="qty-wrap-{{ product.id }}" style="display:none;align-items:center;gap:0.3rem">
+          <button class="qty-btn" onclick="updateQty('{{ product.id }}', 'decrease', document.getElementById('qty-{{ product.id }}'))">−</button>
+          <span class="qty-display" id="qty-{{ product.id }}">1</span>
+          <button class="qty-btn" onclick="updateQty('{{ product.id }}', 'increase', document.getElementById('qty-{{ product.id }}'))">+</button>
+        </div>
+        <button class="add-cart-btn" id="add-btn-{{ product.id }}"
+          onclick="addToCart({{ product.id }}, this)">
+          <i class="fas fa-plus"></i> Add
+        </button>
+        {% else %}
+        <button class="add-cart-btn" disabled>Out of Stock</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>

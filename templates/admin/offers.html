@@ -1,0 +1,92 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Offers — Admin{% endblock %}
+{% block content %}
+
+<h1 class="admin-page-title">✦ Offers & Banners</h1>
+
+<!-- Add Offer -->
+<div class="admin-card">
+  <div class="admin-card-header"><h3><i class="fas fa-plus"></i> Add New Offer / Banner</h3></div>
+  <div class="admin-card-body">
+    <form method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="action" value="add"/>
+      <div class="admin-form-grid">
+        <div class="form-group">
+          <label>Offer Title *</label>
+          <input type="text" name="title" placeholder="e.g. Grand Diwali Sale" required/>
+        </div>
+        <div class="form-group">
+          <label>Subtitle</label>
+          <input type="text" name="subtitle" placeholder="e.g. Up to 30% off on all jewellery"/>
+        </div>
+        <div class="form-group full-width">
+          <label>Offer Banner Image (PNG/JPG/PDF)</label>
+          <label class="file-upload-area" for="offer-img">
+            <i class="fas fa-image"></i>
+            <p>Click to upload banner image</p>
+          </label>
+          <input type="file" id="offer-img" name="image" accept="image/*,.pdf"
+            onchange="this.previousElementSibling.querySelector('p').textContent=this.files[0]?.name||'Click to upload'"/>
+        </div>
+      </div>
+      <button type="submit" class="btn-gold" style="padding:0.7rem 2rem;margin-top:0.5rem">
+        <i class="fas fa-plus"></i> Add Offer
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Offers List -->
+<div class="admin-card">
+  <div class="admin-card-header"><h3>All Offers ({{ offers|length }})</h3></div>
+  {% if offers %}
+  <div style="overflow-x:auto">
+    <table class="admin-table">
+      <thead>
+        <tr><th>Image</th><th>Title</th><th>Subtitle</th><th>Status</th><th>Created</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for offer in offers %}
+        <tr>
+          <td>
+            <div class="product-thumb" style="width:80px;height:50px;border-radius:8px">
+              {% if offer.image %}<img src="{{ url_for('static', filename=offer.image) }}" alt="{{ offer.title }}"/>
+              {% else %}<i class="fas fa-image"></i>{% endif %}
+            </div>
+          </td>
+          <td><strong>{{ offer.title }}</strong></td>
+          <td style="color:var(--text-muted);font-size:0.82rem">{{ offer.subtitle or '—' }}</td>
+          <td>
+            <span class="tag {{ 'tag-active' if offer.is_active else 'tag-inactive' }}">
+              {{ 'Active' if offer.is_active else 'Hidden' }}
+            </span>
+          </td>
+          <td style="color:var(--text-muted);font-size:0.8rem">{{ offer.created_at.strftime('%d %b %Y') }}</td>
+          <td>
+            <div style="display:flex;gap:0.4rem">
+              <form method="POST" style="display:inline">
+                <input type="hidden" name="action" value="toggle"/>
+                <input type="hidden" name="offer_id" value="{{ offer.id }}"/>
+                <button type="submit" class="btn-sm btn-warning">{{ 'Hide' if offer.is_active else 'Show' }}</button>
+              </form>
+              <form method="POST" style="display:inline" onsubmit="return confirm('Delete this offer?')">
+                <input type="hidden" name="action" value="delete"/>
+                <input type="hidden" name="offer_id" value="{{ offer.id }}"/>
+                <button type="submit" class="btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:3rem;color:var(--text-muted)">
+    <i class="fas fa-tags" style="font-size:2.5rem;color:var(--gold);opacity:0.3;display:block;margin-bottom:1rem"></i>
+    <p>No offers added yet. Create your first offer above!</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

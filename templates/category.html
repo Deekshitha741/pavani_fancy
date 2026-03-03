@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ category.name }} — Sri Pavani{% endblock %}
+{% block content %}
+<div data-logged-in="{{ 'true' if current_user.is_authenticated else 'false' }}">
+
+<!-- Category Header -->
+<div class="category-header">
+  <span class="section-eyebrow">Shop</span>
+  <h1 class="section-title">{{ category.name }}</h1>
+  <div class="section-divider"></div>
+  {% if category.description %}
+  <p style="margin-top:1rem;color:var(--text-secondary);font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-style:italic">
+    {{ category.description }}
+  </p>
+  {% endif %}
+</div>
+
+<!-- Products -->
+<div class="category-content">
+  {% if products %}
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+    <span style="font-size:0.85rem;color:var(--text-muted)">{{ products|length }} products found</span>
+  </div>
+  <div class="products-grid">
+    {% for product in products %}
+    {% include "components/product_card.html" %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:5rem 2rem;color:var(--text-muted)">
+    <i class="fas fa-gem" style="font-size:3rem;color:var(--gold);opacity:0.3;display:block;margin-bottom:1rem"></i>
+    <p>No products in this category yet. Check back soon!</p>
+    <a href="{{ url_for('index') }}" class="btn-gold" style="display:inline-block;margin-top:1.5rem">Back to Home</a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Recommended Categories -->
+{% if other_categories %}
+<div class="more-categories">
+  <div style="max-width:1200px;margin:0 auto">
+    <div class="section-header">
+      <span class="section-eyebrow">Explore More</span>
+      <h2 class="section-title">Other Categories</h2>
+      <div class="section-divider"></div>
+    </div>
+    <div class="more-cats-grid">
+      {% for cat in other_categories %}
+      <a href="{{ url_for('category_page', category_id=cat.id) }}" class="category-box">
+        <div class="cat-img-wrap">
+          {% if cat.image %}
+            <img src="{{ url_for('static', filename=cat.image) }}" alt="{{ cat.name }}"/>
+          {% else %}
+            <div class="cat-icon">✦</div>
+          {% endif %}
+        </div>
+        <div class="cat-label">{{ cat.name }}</div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+</div>
+{% endblock %}

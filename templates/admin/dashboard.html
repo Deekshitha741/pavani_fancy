@@ -1,0 +1,57 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Dashboard — Sri Pavani Admin{% endblock %}
+{% block content %}
+
+<h1 class="admin-page-title">✦ Dashboard</h1>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon"><i class="fas fa-gem"></i></div>
+    <div class="stat-number">{{ total_products }}</div>
+    <div class="stat-label">Total Products</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i class="fas fa-th-large"></i></div>
+    <div class="stat-number">{{ total_categories }}</div>
+    <div class="stat-label">Categories</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i class="fas fa-users"></i></div>
+    <div class="stat-number">{{ total_users }}</div>
+    <div class="stat-label">Customers</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i class="fas fa-tags"></i></div>
+    <div class="stat-number">{{ total_offers }}</div>
+    <div class="stat-label">Active Offers</div>
+  </div>
+</div>
+
+<div class="admin-card">
+  <div class="admin-card-header">
+    <h3><i class="fas fa-users" style="margin-right:0.5rem"></i> Recent Customers</h3>
+    <a href="{{ url_for('admin_customers') }}" class="btn-sm btn-success">View All</a>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Name</th><th>Email</th><th>Phone</th><th>City</th><th>Joined</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in recent_users %}
+        <tr>
+          <td><strong>{{ user.name }}</strong></td>
+          <td>{{ user.email }}</td>
+          <td>{{ user.phone or '—' }}</td>
+          <td>{{ user.city or '—' }}</td>
+          <td style="color:var(--text-muted);font-size:0.8rem">{{ user.created_at.strftime('%d %b %Y') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

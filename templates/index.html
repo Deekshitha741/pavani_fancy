@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}Sri Pavani Jewellery — Pure Gold, Pure Love{% endblock %}
+{% block content %}
+<body data-logged-in="{{ 'true' if current_user.is_authenticated else 'false' }}">
+
+<!-- ══ HERO ══ -->
+<section class="hero" id="home">
+  <div class="hero-particles"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">Pure 1 Gram Gold Jewellery</div>
+    <h1>Crafted With<br/>Divine Grace</h1>
+    <p>Where timeless tradition meets contemporary elegance.<br/>
+    Adorning women with the purity of gold since generations.</p>
+    <div class="hero-cta">
+      <a href="#categories" class="primary-cta">Explore Collection</a>
+      <a href="#new-collections" class="secondary-cta">New Arrivals</a>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FLOATING NAV ══ -->
+<nav class="floating-nav" id="main-nav">
+  <div class="floating-nav-inner">
+    <a href="#home" class="nav-pill active">Home</a>
+    <a href="#categories" class="nav-pill">Categories</a>
+    <a href="#offers" class="nav-pill">Offers</a>
+    <a href="#new-collections" class="nav-pill">New Arrivals</a>
+    <a href="#featured" class="nav-pill">Featured</a>
+    <a href="#best-sellers" class="nav-pill">Best Sellers</a>
+    <a href="#about" class="nav-pill">About Us</a>
+  </div>
+</nav>
+
+<!-- ══ CATEGORIES ══ -->
+<section class="section" id="categories">
+  <div class="section-header">
+    <span class="section-eyebrow">Shop By</span>
+    <h2 class="section-title">Categories</h2>
+    <div class="section-divider"></div>
+  </div>
+
+  <div class="categories-strip">
+    {% if categories %}
+      {% for cat in categories %}
+      <a href="{{ url_for('category_page', category_id=cat.id) }}" class="category-box">
+        <div class="cat-img-wrap">
+          {% if cat.image %}
+            <img src="{{ url_for('static', filename=cat.image) }}" alt="{{ cat.name }}"/>
+          {% else %}
+            <div class="cat-icon">
+              {% if 'Neck' in cat.name %}📿
+              {% elif 'Bangle' in cat.name or 'Kada' in cat.name %}💛
+              {% elif 'Ear' in cat.name %}💎
+              {% elif 'Ring' in cat.name %}💍
+              {% elif 'Chain' in cat.name %}⛓
+              {% elif 'Pendant' in cat.name %}🌟
+              {% else %}✦{% endif %}
+            </div>
+          {% endif %}
+        </div>
+        <div class="cat-label">{{ cat.name }}</div>
+      </a>
+      {% endfor %}
+    {% else %}
+      <div style="color:var(--text-muted);font-size:0.9rem;padding:1rem">Categories coming soon...</div>
+    {% endif %}
+  </div>
+
+  <div class="section-footer">
+    <a href="{{ url_for('all_products') }}" class="view-all-btn">
+      View All Categories <i class="fas fa-arrow-right"></i>
+    </a>
+  </div>
+</section>
+
+<!-- ══ OFFERS / DISPLAY ══ -->
+<section class="section alt-bg offers-section" id="offers">
+  <div class="section-header">
+    <span class="section-eyebrow">{% if offers %}Exclusive{% else %}Featured{% endif %}</span>
+    <h2 class="section-title">{% if offers %}Special Offers{% else %}Our Showcase{% endif %}</h2>
+    <div class="section-divider"></div>
+  </div>
+
+  {% if offers %}
+  <div class="offers-grid">
+    {% for offer in offers %}
+    <div class="offer-card">
+      {% if offer.image %}
+        <img src="{{ url_for('static', filename=offer.image) }}" alt="{{ offer.title }}"/>
+      {% endif %}
+      <div class="offer-content">
+        <span class="offer-badge">✦ SPECIAL OFFER</span>
+        <div class="offer-title">{{ offer.title }}</div>
+        <div class="offer-sub">{{ offer.subtitle }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="display-placeholder">
+    <i class="fas fa-gem"></i>
+    <h3 style="font-family:'Cinzel Decorative',serif;font-size:1.2rem;color:var(--gold);margin-bottom:0.5rem">
+      Pure Gold, Pure Elegance
+    </h3>
+    <p style="color:var(--text-muted)">Discover our curated collection of 1 gram gold jewellery, crafted for every occasion.</p>
+  </div>
+  {% endif %}
+</section>
+
+<!-- ══ NEW COLLECTIONS ══ -->
+<section class="section" id="new-collections">
+  <div class="section-header">
+    <span class="section-eyebrow">Just Arrived</span>
+    <h2 class="section-title">New Collections</h2>
+    <div class="section-divider"></div>
+  </div>
+
+  {% if new_collections %}
+  <div class="products-grid">
+    {% for product in new_collections %}
+    {% include "components/product_card.html" %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <p style="text-align:center;color:var(--text-muted);padding:3rem 0;font-size:0.9rem">New collections coming soon...</p>
+  {% endif %}
+
+  <div class="section-footer">
+    <a href="{{ url_for('all_products') }}" class="view-all-btn">
+      View All <i class="fas fa-arrow-right"></i>
+    </a>
+  </div>
+</section>
+
+<!-- ══ FEATURED PRODUCTS ══ -->
+<section class="section alt-bg" id="featured">
+  <div class="section-header">
+    <span class="section-eyebrow">Handpicked For You</span>
+    <h2 class="section-title">Featured Jewellery</h2>
+    <div class="section-divider"></div>
+  </div>
+
+  {% if all_products %}
+  <div class="products-grid">
+    {% for product in all_products %}
+    {% include "components/product_card.html" %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <p style="text-align:center;color:var(--text-muted);padding:3rem 0;font-size:0.9rem">Products coming soon...</p>
+  {% endif %}
+
+  <div class="section-footer">
+    <a href="{{ url_for('all_products') }}" class="view-all-btn">
+      Browse All Products <i class="fas fa-arrow-right"></i>
+    </a>
+  </div>
+</section>
+
+<!-- ══ BEST SELLERS ══ -->
+<section class="section" id="best-sellers">
+  <div class="section-header">
+    <span class="section-eyebrow">Most Loved</span>
+    <h2 class="section-title">Best Sellers</h2>
+    <div class="section-divider"></div>
+  </div>
+
+  {% if best_sellers %}
+  <div class="products-grid">
+    {% for product in best_sellers %}
+    {% include "components/product_card.html" %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <p style="text-align:center;color:var(--text-muted);padding:3rem 0;font-size:0.9rem">Best sellers loading soon...</p>
+  {% endif %}
+
+  <div class="section-footer">
+    <a href="{{ url_for('all_products') }}" class="view-all-btn">
+      See All Best Sellers <i class="fas fa-arrow-right"></i>
+    </a>
+  </div>
+</section>
+
+<!-- ══ ABOUT US ══ -->
+<section class="section alt-bg" id="about">
+  <div class="about-section" style="max-width:1100px;margin:0 auto;">
+    <div class="about-text">
+      <div class="section-header">
+        <span class="section-eyebrow">Our Story</span>
+        <h2 class="section-title">About Sri Pavani</h2>
+        <div class="section-divider" style="margin-left:0;margin-top:0.8rem"></div>
+      </div>
+      <p>Sri Pavani Jewellery was born from a deep love for traditional Indian craftsmanship. We bring you the finest 1 gram gold jewellery — pieces that carry the weight of tradition while being light enough for everyday elegance.</p>
+      <p>Every piece in our collection is thoughtfully designed to celebrate the beauty of Indian women — from the young bride adorning herself for the first time, to the grandmother who treasures her gold as a legacy.</p>
+
+      <div class="why-choose">
+        <div class="why-item">
+          <div class="why-icon">✦</div>
+          <div class="why-title">Premium Quality</div>
+          <div class="why-desc">100% authentic 1 gram gold plating with lasting shine</div>
+        </div>
+        <div class="why-item">
+          <div class="why-icon">🚚</div>
+          <div class="why-title">Safe Delivery</div>
+          <div class="why-desc">Insured shipping straight to your doorstep</div>
+        </div>
+        <div class="why-item">
+          <div class="why-icon">🔄</div>
+          <div class="why-title">Easy Returns</div>
+          <div class="why-desc">7-day hassle-free return policy</div>
+        </div>
+        <div class="why-item">
+          <div class="why-icon">💬</div>
+          <div class="why-title">24/7 Support</div>
+          <div class="why-desc">Always here to help you choose</div>
+        </div>
+        <div class="why-item">
+          <div class="why-icon">🎁</div>
+          <div class="why-title">Gift Wrapping</div>
+          <div class="why-desc">Beautiful packaging for every occasion</div>
+        </div>
+        <div class="why-item">
+          <div class="why-icon">💳</div>
+          <div class="why-title">Secure Payment</div>
+          <div class="why-desc">Multiple safe payment options available</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="about-visual">
+      <div class="about-mandala">
+        <div class="mandala-center">✦</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="{{ url_for('index') }}" class="logo" style="margin-bottom:1rem">
+        <span class="logo-icon">✦</span>
+        <div class="logo-text">
+          <span class="logo-main">SRI PAVANI</span>
+          <span class="logo-sub">JEWELLERY</span>
+        </div>
+      </a>
+      <p>Crafting timeless elegance with the purity of gold. Your trusted jewellery destination for every celebration.</p>
+      <div class="footer-social">
+        <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
+        <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
+        <a href="#" class="social-link"><i class="fab fa-whatsapp"></i></a>
+        <a href="#" class="social-link"><i class="fab fa-youtube"></i></a>
+      </div>
+    </div>
+
+    <div class="footer-col">
+      <h4>Shop</h4>
+      <ul>
+        {% for cat in categories[:5] %}
+        <li><a href="{{ url_for('category_page', category_id=cat.id) }}">{{ cat.name }}</a></li>
+        {% endfor %}
+        <li><a href="{{ url_for('all_products') }}">All Products</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>Account</h4>
+      <ul>
+        {% if current_user.is_authenticated %}
+        <li><a href="{{ url_for('profile') }}">My Profile</a></li>
+        <li><a href="{{ url_for('profile') }}">My Cart</a></li>
+        <li><a href="{{ url_for('edit_profile') }}">Edit Profile</a></li>
+        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        {% else %}
+        <li><a href="{{ url_for('login') }}">Sign In</a></li>
+        <li><a href="{{ url_for('register') }}">Register</a></li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>Support</h4>
+      <ul>
+        <li><a href="#">About Us</a></li>
+        <li><a href="#">Contact</a></li>
+        <li><a href="#">Shipping Policy</a></li>
+        <li><a href="#">Return Policy</a></li>
+        <li><a href="#">Privacy Policy</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <p>© 2024 Sri Pavani Jewellery. All rights reserved. Made with ✦ and gold.</p>
+  </div>
+</footer>
+
+</body>
+{% endblock %}

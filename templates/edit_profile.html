@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Edit Profile — Sri Pavani{% endblock %}
+{% block content %}
+<div class="form-page" data-logged-in="true" style="padding:5rem 2rem 3rem;">
+  <div class="form-card" style="max-width:620px">
+    <h2 class="form-title">Edit Profile</h2>
+    <p class="form-sub">Update your personal information</p>
+
+    <form method="POST">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" name="name" value="{{ current_user.name }}" required/>
+        </div>
+        <div class="form-group">
+          <label>Email (cannot change)</label>
+          <input type="email" value="{{ current_user.email }}" disabled style="opacity:0.5"/>
+        </div>
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input type="tel" name="phone" value="{{ current_user.phone or '' }}"/>
+        </div>
+        <div class="form-group">
+          <label>Date of Birth</label>
+          <input type="date" name="dob" value="{{ current_user.dob or '' }}"/>
+        </div>
+        <div class="form-group">
+          <label>Gender</label>
+          <select name="gender">
+            <option value="">Select</option>
+            <option value="Female" {{ 'selected' if current_user.gender == 'Female' }}>Female</option>
+            <option value="Male" {{ 'selected' if current_user.gender == 'Male' }}>Male</option>
+            <option value="Other" {{ 'selected' if current_user.gender == 'Other' }}>Other</option>
+          </select>
+        </div>
+        <div class="form-group full-width">
+          <label>Address</label>
+          <textarea name="address" rows="2">{{ current_user.address or '' }}</textarea>
+        </div>
+        <div class="form-group">
+          <label>City</label>
+          <input type="text" name="city" value="{{ current_user.city or '' }}"/>
+        </div>
+        <div class="form-group">
+          <label>State</label>
+          <select name="state">
+            <option value="">Select State</option>
+            {% for s in ['Andhra Pradesh','Telangana','Tamil Nadu','Karnataka','Kerala','Maharashtra','Gujarat','Rajasthan','Delhi','Other'] %}
+            <option value="{{ s }}" {{ 'selected' if current_user.state == s }}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Pincode</label>
+          <input type="text" name="pincode" value="{{ current_user.pincode or '' }}"/>
+        </div>
+      </div>
+      <div style="display:flex;gap:1rem;margin-top:1rem">
+        <button type="submit" class="form-submit" style="flex:1">Save Changes ✦</button>
+        <a href="{{ url_for('profile') }}" class="btn-outline" style="padding:0.9rem 2rem;border-radius:50px;text-align:center">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

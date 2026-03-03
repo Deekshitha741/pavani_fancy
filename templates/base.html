@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Sri Pavani Jewellery{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="top-bar">
+  <a href="{{ url_for('index') }}" class="logo">
+    <span class="logo-icon">✦</span>
+    <div class="logo-text">
+      <span class="logo-main">SRI PAVANI</span>
+      <span class="logo-sub">JEWELLERY</span>
+    </div>
+  </a>
+
+  <div class="top-bar-right">
+    <button class="theme-toggle" id="themeToggle" title="Toggle Theme">
+      <i class="fas fa-sun" id="themeIcon"></i>
+    </button>
+
+    {% if current_user.is_authenticated %}
+      <a href="{{ url_for('profile') }}" class="cart-btn">
+        <i class="fas fa-shopping-bag"></i>
+        <span class="cart-badge" id="cartBadge">{{ cart_count() }}</span>
+      </a>
+      <div class="profile-dropdown">
+        <button class="profile-btn">
+          <i class="fas fa-user-circle"></i>
+          <span class="profile-name">{{ current_user.name.split()[0] }}</span>
+          <i class="fas fa-chevron-down tiny"></i>
+        </button>
+        <div class="dropdown-menu">
+          <a href="{{ url_for('profile') }}"><i class="fas fa-user"></i> My Profile</a>
+          <a href="{{ url_for('profile') }}"><i class="fas fa-shopping-bag"></i> My Cart</a>
+          <a href="{{ url_for('edit_profile') }}"><i class="fas fa-edit"></i> Edit Profile</a>
+          {% if current_user.is_admin %}
+          <a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-crown"></i> Admin Panel</a>
+          {% endif %}
+          <a href="{{ url_for('logout') }}" class="logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+      </div>
+    {% else %}
+      <a href="{{ url_for('login') }}" class="auth-btn">
+        <i class="fas fa-sign-in-alt"></i> Sign In
+      </a>
+      <a href="{{ url_for('register') }}" class="auth-btn primary">
+        <i class="fas fa-user-plus"></i> Register
+      </a>
+    {% endif %}
+
+    <button class="hamburger" id="hamburger">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobileMenu">
+  <div class="mobile-menu-header">
+    <span class="logo-main">SRI PAVANI</span>
+    <button class="close-menu" id="closeMenu"><i class="fas fa-times"></i></button>
+  </div>
+  <nav class="mobile-nav">
+    {% if current_user.is_authenticated %}
+    <div class="mobile-user-info">
+      <i class="fas fa-user-circle fa-2x"></i>
+      <span>{{ current_user.name }}</span>
+    </div>
+    <a href="{{ url_for('profile') }}"><i class="fas fa-user"></i> My Profile</a>
+    <a href="{{ url_for('profile') }}"><i class="fas fa-shopping-bag"></i> My Cart <span class="badge">{{ cart_count() }}</span></a>
+    <a href="{{ url_for('edit_profile') }}"><i class="fas fa-edit"></i> Edit Profile</a>
+    {% if current_user.is_admin %}
+    <a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-crown"></i> Admin Panel</a>
+    {% endif %}
+    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    {% else %}
+    <a href="{{ url_for('login') }}"><i class="fas fa-sign-in-alt"></i> Sign In</a>
+    <a href="{{ url_for('register') }}"><i class="fas fa-user-plus"></i> Register</a>
+    {% endif %}
+  </nav>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<!-- FLASH MESSAGES -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-container">
+      {% for cat, msg in messages %}
+        <div class="flash-msg flash-{{ cat }}">
+          <i class="fas fa-{{ 'check-circle' if cat == 'success' else 'exclamation-circle' }}"></i>
+          {{ msg }}
+          <button onclick="this.parentElement.remove()">×</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- LOGIN POPUP -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal-box">
+    <div class="modal-icon">✦</div>
+    <h3>Sign In Required</h3>
+    <p>Please sign in or create an account to add items to your cart.</p>
+    <div class="modal-actions">
+      <a href="{{ url_for('login') }}" class="btn-gold">Sign In</a>
+      <a href="{{ url_for('register') }}" class="btn-outline">Register</a>
+    </div>
+    <button class="modal-close" onclick="document.getElementById('loginModal').classList.remove('active')">×</button>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

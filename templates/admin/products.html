@@ -4,12 +4,59 @@
 
 <h1 class="admin-page-title">✦ Products</h1>
 
+<!-- Image Cropper Modal -->
+<div class="cropper-modal-overlay" id="cropperModal">
+  <div class="cropper-modal-box">
+    <h3>
+      <span><i class="fas fa-crop-alt" style="margin-right:.5rem"></i>Crop Product Image</span>
+      <button onclick="closeCropper()" style="color:var(--text-muted);font-size:1.2rem;background:none;border:none;cursor:pointer">×</button>
+    </h3>
+
+    <!-- Aspect ratio buttons -->
+    <div class="crop-ratio-btns">
+      <span style="font-size:.75rem;color:var(--text-muted);margin-right:.3rem">Aspect ratio:</span>
+      <button class="crop-ratio-btn active" onclick="setRatio(3,4,this)">3:4 (Card)</button>
+      <button class="crop-ratio-btn" onclick="setRatio(1,1,this)">1:1 (Square)</button>
+      <button class="crop-ratio-btn" onclick="setRatio(4,3,this)">4:3 (Wide)</button>
+      <button class="crop-ratio-btn" onclick="setRatio(0,0,this)">Free</button>
+    </div>
+
+    <div class="cropper-workspace">
+      <div>
+        <div style="position:relative;overflow:hidden;border-radius:10px;border:1px solid var(--border);background:#000;line-height:0" id="cropContainer">
+          <img id="cropperImgEl" src="" alt="Crop image"/>
+          <!-- Drag selection overlay -->
+          <div id="cropOverlay" style="position:absolute;inset:0;cursor:crosshair"></div>
+          <div id="cropSelection" style="position:absolute;border:2px solid var(--gold);background:rgba(201,168,76,.1);display:none;pointer-events:none"></div>
+        </div>
+        <div class="crop-controls">
+          <button class="btn-gold" onclick="applyCrop()" style="padding:.55rem 1.5rem;font-size:.82rem">
+            <i class="fas fa-check"></i> Use This Crop
+          </button>
+          <button class="btn-outline" onclick="resetCrop()" style="padding:.55rem 1.2rem;font-size:.82rem">
+            <i class="fas fa-undo"></i> Reset
+          </button>
+          <button class="btn-outline" onclick="closeCropper()" style="padding:.55rem 1.2rem;font-size:.82rem;color:#e57373;border-color:rgba(229,115,115,.4)">
+            Cancel
+          </button>
+        </div>
+      </div>
+      <div class="crop-preview-wrap">
+        <p>Preview (Card Size)</p>
+        <canvas id="cropPreviewCanvas" width="200" height="240"></canvas>
+        <p style="margin-top:.6rem;font-size:.7rem">This is how it will<br>appear on product cards</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Add Product -->
 <div class="admin-card">
   <div class="admin-card-header"><h3><i class="fas fa-plus"></i> Add New Product</h3></div>
   <div class="admin-card-body">
-    <form method="POST" enctype="multipart/form-data">
+    <form method="POST" enctype="multipart/form-data" id="addProductForm">
       <input type="hidden" name="action" value="add"/>
+      <input type="hidden" name="cropped_image_data" id="croppedImageData"/>
       <div class="admin-form-grid">
         <div class="form-group">
           <label>Product Name *</label>
@@ -37,13 +84,32 @@
           <textarea name="description" rows="2" placeholder="Describe the product..."></textarea>
         </div>
         <div class="form-group full-width">
-          <label>Product Image (PNG/JPG/PDF)</label>
-          <label class="file-upload-area" for="prod-img">
-            <i class="fas fa-cloud-upload-alt"></i>
-            <p>Click to upload product image</p>
+          <label>Product Image
+            <span style="font-size:.7rem;color:var(--text-muted);margin-left:.5rem">(you can crop after selecting)</span>
           </label>
-          <input type="file" id="prod-img" name="image" accept="image/*,.pdf"
-            onchange="this.previousElementSibling.querySelector('p').textContent=this.files[0]?.name||'Click to upload'"/>
+          <!-- Image upload + crop preview -->
+          <div style="display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:start">
+            <div>
+              <label class="file-upload-area" for="prod-img" id="imgUploadArea">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Click to select product image</p>
+              </label>
+              <input type="file" id="prod-img" name="image" accept="image/*"/>
+            </div>
+            <div id="cropPreviewThumb" style="display:none;text-align:center">
+              <p style="font-size:.72rem;color:var(--text-muted);margin-bottom:.4rem">Cropped</p>
+              <img id="cropThumbImg" style="width:100px;height:120px;object-fit:cover;border-radius:10px;border:2px solid var(--gold)" src="" alt=""/>
+              <br>
+              <button type="button" onclick="openCropper()" style="font-size:.72rem;color:var(--gold);margin-top:.4rem;text-decoration:underline;background:none;border:none;cursor:pointer">
+                Re-crop
+              </button>
+            </div>
+          </div>
+          <!-- Crop button appears after image selected -->
+          <button type="button" id="openCropBtn" onclick="openCropper()"
+            style="display:none;margin-top:.6rem;padding:.45rem 1.2rem;border-radius:20px;border:1px solid var(--border-gold);color:var(--gold);font-size:.78rem;font-weight:600;background:none;cursor:pointer">
+            <i class="fas fa-crop-alt"></i> Crop Image
+          </button>
         </div>
         <div class="form-group" style="grid-column:1/-1">
           <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
@@ -58,7 +124,7 @@
           </div>
         </div>
       </div>
-      <button type="submit" class="btn-gold" style="padding:0.7rem 2rem;margin-top:0.5rem">
+      <button type="submit" class="btn-gold" style="padding:.7rem 2rem;margin-top:.5rem">
         <i class="fas fa-plus"></i> Add Product
       </button>
     </form>
@@ -85,14 +151,14 @@
           <td>
             <strong>{{ product.name }}</strong>
             {% if product.description %}
-            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">{{ product.description[:50] }}...</div>
+            <div style="font-size:.75rem;color:var(--text-muted);margin-top:2px">{{ product.description[:50] }}...</div>
             {% endif %}
           </td>
           <td><span class="tag tag-gold">{{ product.category.name }}</span></td>
           <td style="font-weight:700;color:var(--gold)">₹{{ "%.0f"|format(product.price) }}</td>
           <td>
             {% if product.is_new_collection %}<span class="tag tag-active" style="display:block;margin-bottom:2px">New</span>{% endif %}
-            {% if product.is_best_seller %}<span class="tag" style="background:rgba(255,183,77,0.2);color:#ffb74d;display:block">Best Seller</span>{% endif %}
+            {% if product.is_best_seller %}<span class="tag" style="background:rgba(255,183,77,.2);color:#ffb74d;display:block">Best Seller</span>{% endif %}
           </td>
           <td>
             <span class="tag {{ 'tag-inactive' if product.is_stock_out else 'tag-active' }}">
@@ -100,12 +166,12 @@
             </span>
           </td>
           <td>
-            <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+            <div style="display:flex;gap:.4rem;flex-wrap:wrap">
               <form method="POST" style="display:inline">
                 <input type="hidden" name="action" value="toggle_stock"/>
                 <input type="hidden" name="product_id" value="{{ product.id }}"/>
-                <button type="submit" class="btn-sm btn-warning" title="Toggle Stock">
-                  {{ 'Mark In Stock' if product.is_stock_out else 'Mark Out of Stock' }}
+                <button type="submit" class="btn-sm btn-warning">
+                  {{ 'Mark In Stock' if product.is_stock_out else 'Out of Stock' }}
                 </button>
               </form>
               <form method="POST" style="display:inline" onsubmit="return confirm('Delete this product?')">
@@ -121,5 +187,182 @@
     </table>
   </div>
 </div>
+
+<script>
+// ── IMAGE CROPPER ──
+let originalImageSrc = null;
+let cropRatioW = 3, cropRatioH = 4;
+let isDragging = false;
+let startX, startY, cropX, cropY, cropW, cropH;
+
+const imgEl = document.getElementById('cropperImgEl');
+const overlay = document.getElementById('cropOverlay');
+const selection = document.getElementById('cropSelection');
+const previewCanvas = document.getElementById('cropPreviewCanvas');
+const container = document.getElementById('cropContainer');
+const thumbImg = document.getElementById('cropThumbImg');
+const thumbWrap = document.getElementById('cropPreviewThumb');
+
+// File input change
+document.getElementById('prod-img').addEventListener('change', function() {
+  if (!this.files.length) return;
+  const file = this.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    originalImageSrc = e.target.result;
+    document.getElementById('imgUploadArea').querySelector('p').textContent = file.name;
+    document.getElementById('openCropBtn').style.display = 'inline-flex';
+  };
+  reader.readAsDataURL(file);
+});
+
+function openCropper() {
+  if (!originalImageSrc) return;
+  imgEl.src = originalImageSrc;
+  document.getElementById('cropperModal').classList.add('active');
+  imgEl.onload = () => {
+    resetCrop();
+    drawPreview();
+  };
+}
+
+function closeCropper() {
+  document.getElementById('cropperModal').classList.remove('active');
+}
+
+function setRatio(w, h, btn) {
+  cropRatioW = w; cropRatioH = h;
+  document.querySelectorAll('.crop-ratio-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  resetCrop();
+}
+
+function resetCrop() {
+  const img = imgEl;
+  const iw = img.naturalWidth, ih = img.naturalHeight;
+  const dispW = img.offsetWidth, dispH = img.offsetHeight;
+
+  if (cropRatioW && cropRatioH) {
+    // Calculate crop box matching ratio
+    let cw = dispW * 0.85;
+    let ch = cw * (cropRatioH / cropRatioW);
+    if (ch > dispH * 0.85) { ch = dispH * 0.85; cw = ch * (cropRatioW / cropRatioH); }
+    cropX = (dispW - cw) / 2;
+    cropY = (dispH - ch) / 2;
+    cropW = cw; cropH = ch;
+  } else {
+    cropX = dispW * 0.1; cropY = dispH * 0.1;
+    cropW = dispW * 0.8; cropH = dispH * 0.8;
+  }
+  updateSelectionUI();
+  drawPreview();
+}
+
+function updateSelectionUI() {
+  selection.style.display = 'block';
+  selection.style.left = cropX + 'px';
+  selection.style.top = cropY + 'px';
+  selection.style.width = cropW + 'px';
+  selection.style.height = cropH + 'px';
+}
+
+// Drag to select crop area
+overlay.addEventListener('mousedown', e => {
+  const rect = container.getBoundingClientRect();
+  startX = e.clientX - rect.left;
+  startY = e.clientY - rect.top;
+  cropX = startX; cropY = startY; cropW = 0; cropH = 0;
+  isDragging = true;
+});
+
+overlay.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const rect = container.getBoundingClientRect();
+  const curX = Math.max(0, Math.min(e.clientX - rect.left, container.offsetWidth));
+  const curY = Math.max(0, Math.min(e.clientY - rect.top, container.offsetHeight));
+
+  let dx = curX - startX, dy = curY - startY;
+
+  if (cropRatioW && cropRatioH) {
+    // Lock ratio
+    const targetRatio = cropRatioW / cropRatioH;
+    if (Math.abs(dx) > Math.abs(dy)) { dy = dx / targetRatio; }
+    else { dx = dy * targetRatio; }
+  }
+
+  cropX = dx < 0 ? startX + dx : startX;
+  cropY = dy < 0 ? startY + dy : startY;
+  cropW = Math.abs(dx); cropH = Math.abs(dy);
+
+  updateSelectionUI();
+  drawPreview();
+});
+
+overlay.addEventListener('mouseup', () => { isDragging = false; });
+
+// Touch support
+overlay.addEventListener('touchstart', e => {
+  const t = e.touches[0];
+  const rect = container.getBoundingClientRect();
+  startX = t.clientX - rect.left; startY = t.clientY - rect.top;
+  cropX = startX; cropY = startY; cropW = 0; cropH = 0;
+  isDragging = true;
+}, {passive:true});
+
+overlay.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  const t = e.touches[0];
+  const rect = container.getBoundingClientRect();
+  const curX = Math.max(0, Math.min(t.clientX - rect.left, container.offsetWidth));
+  const curY = Math.max(0, Math.min(t.clientY - rect.top, container.offsetHeight));
+  let dx = curX - startX, dy = curY - startY;
+  if (cropRatioW && cropRatioH) {
+    const r = cropRatioW / cropRatioH;
+    if (Math.abs(dx) > Math.abs(dy)) dy = dx / r; else dx = dy * r;
+  }
+  cropX = dx < 0 ? startX + dx : startX;
+  cropY = dy < 0 ? startY + dy : startY;
+  cropW = Math.abs(dx); cropH = Math.abs(dy);
+  updateSelectionUI(); drawPreview();
+}, {passive:true});
+
+overlay.addEventListener('touchend', () => { isDragging = false; });
+
+function drawPreview() {
+  if (!imgEl.naturalWidth) return;
+  const canvas = previewCanvas;
+  const ctx = canvas.getContext('2d');
+  const scaleX = imgEl.naturalWidth / imgEl.offsetWidth;
+  const scaleY = imgEl.naturalHeight / imgEl.offsetHeight;
+  const sx = cropX * scaleX, sy = cropY * scaleY;
+  const sw = cropW * scaleX, sh = cropH * scaleY;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (sw > 0 && sh > 0) {
+    ctx.drawImage(imgEl, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  }
+}
+
+function applyCrop() {
+  if (!imgEl.naturalWidth || cropW < 5 || cropH < 5) {
+    // No crop selected, use full image
+    document.getElementById('croppedImageData').value = originalImageSrc;
+    thumbImg.src = originalImageSrc;
+    thumbWrap.style.display = 'block';
+    closeCropper();
+    return;
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = 600; canvas.height = 720; // Fixed output size
+  const ctx = canvas.getContext('2d');
+  const scaleX = imgEl.naturalWidth / imgEl.offsetWidth;
+  const scaleY = imgEl.naturalHeight / imgEl.offsetHeight;
+  ctx.drawImage(imgEl, cropX * scaleX, cropY * scaleY, cropW * scaleX, cropH * scaleY, 0, 0, 600, 720);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  document.getElementById('croppedImageData').value = dataUrl;
+  thumbImg.src = dataUrl;
+  thumbWrap.style.display = 'block';
+  closeCropper();
+}
+</script>
 
 {% endblock %}

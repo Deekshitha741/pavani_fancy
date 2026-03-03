@@ -22,15 +22,18 @@
 
   <div class="product-info">
     <div class="product-name">{{ product.name }}</div>
+    {% if product.description %}
+    <div class="product-desc">{{ product.description[:60] }}{% if product.description|length > 60 %}...{% endif %}</div>
+    {% endif %}
     <div class="product-weight">1 Gram Gold • {{ product.weight }}g</div>
     <div class="product-footer">
       <div class="product-price">₹{{ "%.0f"|format(product.price) }}</div>
-      <div class="cart-controls">
+      <div class="cart-controls" id="cart-ctrl-{{ product.id }}">
         {% if not product.is_stock_out %}
         <div class="qty-wrap" id="qty-wrap-{{ product.id }}" style="display:none;align-items:center;gap:0.3rem">
-          <button class="qty-btn" onclick="updateQty('{{ product.id }}', 'decrease', document.getElementById('qty-{{ product.id }}'))">−</button>
+          <button class="qty-btn" onclick="changeQty({{ product.id }}, 'decrease')">−</button>
           <span class="qty-display" id="qty-{{ product.id }}">1</span>
-          <button class="qty-btn" onclick="updateQty('{{ product.id }}', 'increase', document.getElementById('qty-{{ product.id }}'))">+</button>
+          <button class="qty-btn" onclick="changeQty({{ product.id }}, 'increase')">+</button>
         </div>
         <button class="add-cart-btn" id="add-btn-{{ product.id }}"
           onclick="addToCart({{ product.id }}, this)">

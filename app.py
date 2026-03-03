@@ -73,7 +73,10 @@ class Offer(db.Model):
     title = db.Column(db.String(200))
     subtitle = db.Column(db.String(200))
     image = db.Column(db.String(200))
+    # height options: 'small'=180px, 'medium'=280px, 'large'=380px, 'banner'=480px
+    height_size = db.Column(db.String(20), default='medium')
     is_active = db.Column(db.Boolean, default=True)
+    sort_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class CartItem(db.Model):
@@ -112,6 +115,15 @@ def cart_count():
 
 app.jinja_env.globals.update(cart_count=cart_count)
 
+# Height size map for offers
+OFFER_HEIGHT_MAP = {
+    'small': 180,
+    'medium': 280,
+    'large': 380,
+    'banner': 480
+}
+app.jinja_env.globals.update(offer_height_map=OFFER_HEIGHT_MAP)
+
 # ─────────────────────────────────────────
 # MAIN ROUTES
 # ─────────────────────────────────────────
@@ -119,11 +131,15 @@ app.jinja_env.globals.update(cart_count=cart_count)
 @app.route('/')
 def index():
     categories = Category.query.filter_by(is_active=True).all()
-    offers = Offer.query.filter_by(is_active=True).all()
+    all_active_offers = Offer.query.filter_by(is_active=True).order_by(Offer.sort_order, Offer.created_at).all()
+    # First 3 go in main section, rest go in secondary section
+    main_offers = all_active_offers[:3]
+    extra_offers = all_active_offers[3:]
     new_collections = Product.query.filter_by(is_new_collection=True, is_active=True, is_stock_out=False).limit(8).all()
     best_sellers = Product.query.filter_by(is_best_seller=True, is_active=True, is_stock_out=False).limit(8).all()
     all_products = Product.query.filter_by(is_active=True, is_stock_out=False).limit(8).all()
-    return render_template('index.html', categories=categories, offers=offers,
+    return render_template('index.html', categories=categories,
+                           main_offers=main_offers, extra_offers=extra_offers,
                            new_collections=new_collections, best_sellers=best_sellers,
                            all_products=all_products)
 
@@ -232,8 +248,10 @@ def add_to_cart(product_id):
         item = CartItem(user_id=current_user.id, product_id=product_id, quantity=1)
         db.session.add(item)
     db.session.commit()
+    # Re-fetch to get id
+    item = CartItem.query.filter_by(user_id=current_user.id, product_id=product_id).first()
     count = CartItem.query.filter_by(user_id=current_user.id).count()
-    return jsonify({'success': True, 'cart_count': count})
+    return jsonify({'success': True, 'cart_count': count, 'item_id': item.id, 'quantity': item.quantity})
 
 @app.route('/cart/update/<int:item_id>', methods=['POST'])
 @login_required
@@ -244,15 +262,18 @@ def update_cart(item_id):
         return jsonify({'success': False})
     if action == 'increase':
         item.quantity += 1
+        db.session.commit()
+        return jsonify({'success': True, 'quantity': item.quantity, 'removed': False})
     elif action == 'decrease':
         if item.quantity > 1:
             item.quantity -= 1
+            db.session.commit()
+            return jsonify({'success': True, 'quantity': item.quantity, 'removed': False})
         else:
             db.session.delete(item)
             db.session.commit()
             return jsonify({'success': True, 'removed': True})
-    db.session.commit()
-    return jsonify({'success': True, 'quantity': item.quantity})
+    return jsonify({'success': False})
 
 @app.route('/cart/remove/<int:item_id>', methods=['POST'])
 @login_required
@@ -335,8 +356,27 @@ def admin_products():
             category_id = request.form.get('category_id')
             is_new = 'is_new_collection' in request.form
             is_best = 'is_best_seller' in request.form
-            image_file = request.files.get('image')
-            image_path = save_file(image_file, 'products') if image_file else None
+            # Check for cropped image data (base64)
+            cropped_data = request.form.get('cropped_image_data')
+            image_path = None
+            if cropped_data and cropped_data.startswith('data:image'):
+                # Save base64 image
+                import base64, re
+                match = re.match(r'data:image/(\w+);base64,(.*)', cropped_data, re.DOTALL)
+                if match:
+                    ext = match.group(1)
+                    img_data = base64.b64decode(match.group(2))
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+                    filename = f'{timestamp}cropped.{ext}'
+                    path = os.path.join(app.config['UPLOAD_FOLDER'], 'products')
+                    os.makedirs(path, exist_ok=True)
+                    with open(os.path.join(path, filename), 'wb') as f:
+                        f.write(img_data)
+                    image_path = f'uploads/products/{filename}'
+            else:
+                image_file = request.files.get('image')
+                image_path = save_file(image_file, 'products') if image_file else None
+
             product = Product(name=name, description=description, price=price,
                               weight=weight, category_id=category_id, image=image_path,
                               is_new_collection=is_new, is_best_seller=is_best)
@@ -369,12 +409,20 @@ def admin_offers():
         if action == 'add':
             title = request.form.get('title')
             subtitle = request.form.get('subtitle')
+            height_size = request.form.get('height_size', 'medium')
+            sort_order = int(request.form.get('sort_order', 0))
             image_file = request.files.get('image')
             image_path = save_file(image_file, 'offers') if image_file else None
-            offer = Offer(title=title, subtitle=subtitle, image=image_path)
+            offer = Offer(title=title, subtitle=subtitle, image=image_path,
+                         height_size=height_size, sort_order=sort_order)
             db.session.add(offer)
             db.session.commit()
-            flash('Offer added!', 'success')
+            # Check if more than 3
+            active_count = Offer.query.filter_by(is_active=True).count()
+            if active_count > 3:
+                flash(f'Offer added! Note: You now have {active_count} active offers. Offers beyond the first 3 will appear in the "More Offers" section below.', 'success')
+            else:
+                flash('Offer added!', 'success')
         elif action == 'delete':
             oid = request.form.get('offer_id')
             offer = Offer.query.get(oid)
@@ -388,8 +436,16 @@ def admin_offers():
             if offer:
                 offer.is_active = not offer.is_active
                 db.session.commit()
-    offers = Offer.query.all()
-    return render_template('admin/offers.html', offers=offers)
+        elif action == 'update_size':
+            oid = request.form.get('offer_id')
+            new_size = request.form.get('height_size')
+            offer = Offer.query.get(oid)
+            if offer and new_size in OFFER_HEIGHT_MAP:
+                offer.height_size = new_size
+                db.session.commit()
+                flash('Offer size updated!', 'success')
+    offers = Offer.query.order_by(Offer.sort_order, Offer.created_at).all()
+    return render_template('admin/offers.html', offers=offers, height_map=OFFER_HEIGHT_MAP)
 
 @app.route('/admin/customers')
 @login_required
@@ -434,12 +490,23 @@ def seed_data():
     for p in sample_products:
         db.session.add(p)
 
-    offer = Offer(title='Grand Diwali Sale', subtitle='Up to 30% off on all jewellery', image=None, is_active=True)
+    offer = Offer(title='Grand Diwali Sale', subtitle='Up to 30% off on all jewellery', image=None, is_active=True, height_size='medium')
     db.session.add(offer)
     db.session.commit()
 
 with app.app_context():
     db.create_all()
+    # Add height_size column if missing (for existing DBs)
+    try:
+        db.session.execute(db.text("ALTER TABLE offer ADD COLUMN height_size VARCHAR(20) DEFAULT 'medium'"))
+        db.session.commit()
+    except:
+        pass
+    try:
+        db.session.execute(db.text("ALTER TABLE offer ADD COLUMN sort_order INTEGER DEFAULT 0"))
+        db.session.commit()
+    except:
+        pass
     seed_data()
 
 if __name__ == '__main__':

@@ -4,6 +4,12 @@
 
 <h1 class="admin-page-title">✦ Offers & Banners</h1>
 
+<!-- Info Banner -->
+<div style="background:rgba(201,168,76,0.08);border:1px solid var(--border-gold);border-radius:16px;padding:1rem 1.5rem;margin-bottom:2rem;font-size:.85rem;color:var(--text-secondary)">
+  <i class="fas fa-info-circle" style="color:var(--gold);margin-right:.5rem"></i>
+  <strong style="color:var(--gold)">How offers work:</strong> The first 3 active offers appear in the main "Special Offers" section on the homepage. Any additional offers beyond 3 appear in a separate "More Deals" section further down the page.
+</div>
+
 <!-- Add Offer -->
 <div class="admin-card">
   <div class="admin-card-header"><h3><i class="fas fa-plus"></i> Add New Offer / Banner</h3></div>
@@ -19,17 +25,48 @@
           <label>Subtitle</label>
           <input type="text" name="subtitle" placeholder="e.g. Up to 30% off on all jewellery"/>
         </div>
+
+        <!-- SIZE SELECTOR -->
         <div class="form-group full-width">
-          <label>Offer Banner Image (PNG/JPG/PDF)</label>
+          <label style="margin-bottom:.6rem;display:block">
+            <i class="fas fa-arrows-alt-v" style="color:var(--gold);margin-right:.4rem"></i>
+            Banner Height Size
+          </label>
+          <div class="size-selector-group">
+            <input type="radio" name="height_size" value="small" id="sz_small" class="size-radio"/>
+            <label for="sz_small">Small <span style="opacity:.6;font-size:.68rem">(180px)</span></label>
+
+            <input type="radio" name="height_size" value="medium" id="sz_medium" class="size-radio" checked/>
+            <label for="sz_medium">Medium <span style="opacity:.6;font-size:.68rem">(280px)</span></label>
+
+            <input type="radio" name="height_size" value="large" id="sz_large" class="size-radio"/>
+            <label for="sz_large">Large <span style="opacity:.6;font-size:.68rem">(380px)</span></label>
+
+            <input type="radio" name="height_size" value="banner" id="sz_banner" class="size-radio"/>
+            <label for="sz_banner">Full Banner <span style="opacity:.6;font-size:.68rem">(480px)</span></label>
+          </div>
+          <!-- Live preview bar -->
+          <div class="offer-preview-bar" id="sizePreviewBar" style="height:280px;margin-top:.8rem">
+            <span><i class="fas fa-image" style="margin-right:.5rem"></i>Height preview</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Display Order <span style="color:var(--text-muted);font-size:.7rem">(lower = shown first)</span></label>
+          <input type="number" name="sort_order" value="0" min="0"/>
+        </div>
+
+        <div class="form-group">
+          <label>Offer Banner Image (PNG/JPG)</label>
           <label class="file-upload-area" for="offer-img">
             <i class="fas fa-image"></i>
             <p>Click to upload banner image</p>
           </label>
-          <input type="file" id="offer-img" name="image" accept="image/*,.pdf"
+          <input type="file" id="offer-img" name="image" accept="image/*"
             onchange="this.previousElementSibling.querySelector('p').textContent=this.files[0]?.name||'Click to upload'"/>
         </div>
       </div>
-      <button type="submit" class="btn-gold" style="padding:0.7rem 2rem;margin-top:0.5rem">
+      <button type="submit" class="btn-gold" style="padding:.7rem 2rem;margin-top:.5rem">
         <i class="fas fa-plus"></i> Add Offer
       </button>
     </form>
@@ -38,32 +75,63 @@
 
 <!-- Offers List -->
 <div class="admin-card">
-  <div class="admin-card-header"><h3>All Offers ({{ offers|length }})</h3></div>
+  <div class="admin-card-header">
+    <h3>All Offers ({{ offers|length }}) — <span style="color:var(--text-muted);font-size:.8rem;font-weight:400">First 3 active = Main section · Rest = More Deals section</span></h3>
+  </div>
   {% if offers %}
   <div style="overflow-x:auto">
     <table class="admin-table">
       <thead>
-        <tr><th>Image</th><th>Title</th><th>Subtitle</th><th>Status</th><th>Created</th><th>Actions</th></tr>
+        <tr><th>#</th><th>Image</th><th>Title</th><th>Size</th><th>Status</th><th>Change Size</th><th>Actions</th></tr>
       </thead>
       <tbody>
+        {% set active_count = namespace(val=0) %}
         {% for offer in offers %}
+        {% if offer.is_active %}{% set active_count.val = active_count.val + 1 %}{% endif %}
         <tr>
+          <td style="color:var(--text-muted);font-size:.8rem">
+            {% if offer.is_active %}
+              {% if loop.index <= 3 %}
+                <span class="tag tag-active" title="Main section">Main</span>
+              {% else %}
+                <span class="tag" style="background:rgba(255,183,77,.2);color:#ffb74d" title="More Deals section">Extra</span>
+              {% endif %}
+            {% endif %}
+          </td>
           <td>
-            <div class="product-thumb" style="width:80px;height:50px;border-radius:8px">
+            <div class="product-thumb" style="width:72px;height:50px;border-radius:8px">
               {% if offer.image %}<img src="{{ url_for('static', filename=offer.image) }}" alt="{{ offer.title }}"/>
               {% else %}<i class="fas fa-image"></i>{% endif %}
             </div>
           </td>
-          <td><strong>{{ offer.title }}</strong></td>
-          <td style="color:var(--text-muted);font-size:0.82rem">{{ offer.subtitle or '—' }}</td>
+          <td>
+            <strong>{{ offer.title }}</strong>
+            {% if offer.subtitle %}<div style="font-size:.75rem;color:var(--text-muted);margin-top:2px">{{ offer.subtitle }}</div>{% endif %}
+          </td>
+          <td>
+            <span class="tag tag-gold">{{ offer.height_size|capitalize }}</span>
+          </td>
           <td>
             <span class="tag {{ 'tag-active' if offer.is_active else 'tag-inactive' }}">
               {{ 'Active' if offer.is_active else 'Hidden' }}
             </span>
           </td>
-          <td style="color:var(--text-muted);font-size:0.8rem">{{ offer.created_at.strftime('%d %b %Y') }}</td>
+          <!-- Inline size changer -->
           <td>
-            <div style="display:flex;gap:0.4rem">
+            <form method="POST" style="display:inline-flex;align-items:center;gap:.4rem">
+              <input type="hidden" name="action" value="update_size"/>
+              <input type="hidden" name="offer_id" value="{{ offer.id }}"/>
+              <select name="height_size" style="padding:.3rem .6rem;border-radius:8px;background:var(--input-bg);border:1px solid var(--border);color:var(--text-primary);font-size:.78rem"
+                onchange="this.form.submit()">
+                <option value="small" {{ 'selected' if offer.height_size=='small' }}>Small (180px)</option>
+                <option value="medium" {{ 'selected' if offer.height_size=='medium' }}>Medium (280px)</option>
+                <option value="large" {{ 'selected' if offer.height_size=='large' }}>Large (380px)</option>
+                <option value="banner" {{ 'selected' if offer.height_size=='banner' }}>Banner (480px)</option>
+              </select>
+            </form>
+          </td>
+          <td>
+            <div style="display:flex;gap:.4rem;flex-wrap:wrap">
               <form method="POST" style="display:inline">
                 <input type="hidden" name="action" value="toggle"/>
                 <input type="hidden" name="offer_id" value="{{ offer.id }}"/>
@@ -83,10 +151,21 @@
   </div>
   {% else %}
   <div style="text-align:center;padding:3rem;color:var(--text-muted)">
-    <i class="fas fa-tags" style="font-size:2.5rem;color:var(--gold);opacity:0.3;display:block;margin-bottom:1rem"></i>
+    <i class="fas fa-tags" style="font-size:2.5rem;color:var(--gold);opacity:.3;display:block;margin-bottom:1rem"></i>
     <p>No offers added yet. Create your first offer above!</p>
   </div>
   {% endif %}
 </div>
+
+<script>
+// Live preview of size selector
+const sizeMap = { small: 180, medium: 280, large: 380, banner: 480 };
+const previewBar = document.getElementById('sizePreviewBar');
+document.querySelectorAll('.size-radio').forEach(radio => {
+  radio.addEventListener('change', () => {
+    if (previewBar) previewBar.style.height = sizeMap[radio.value] + 'px';
+  });
+});
+</script>
 
 {% endblock %}

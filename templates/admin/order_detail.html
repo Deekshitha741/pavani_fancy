@@ -1,0 +1,225 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Order {{ order.order_number }} — Admin{% endblock %}
+{% block content %}
+
+{% set sc = status_colors.get(order.status, ('rgba(100,100,100,.15)','#aaa')) %}
+
+<div style="display:flex;align-items:center;gap:1rem;margin-bottom:2rem;flex-wrap:wrap">
+  <a href="{{ url_for('admin_orders') }}" style="color:var(--text-muted);font-size:.85rem;text-decoration:none">
+    <i class="fas fa-arrow-left"></i> Back to Orders
+  </a>
+  <h1 class="admin-page-title" style="margin-bottom:0">✦ {{ order.order_number }}</h1>
+  <span style="display:inline-block;padding:.3rem 1rem;border-radius:20px;font-size:.78rem;font-weight:700;
+               background:{{ sc[0] }};color:{{ sc[1] }};border:1px solid {{ sc[1] }}30;letter-spacing:.08em">
+    {{ order.status|upper }}
+  </span>
+</div>
+
+<div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:1.5rem;align-items:start">
+
+  <!-- LEFT -->
+  <div>
+
+    <!-- Order Items -->
+    <div class="admin-card" style="margin-bottom:1.5rem">
+      <div class="admin-card-header"><h3><i class="fas fa-box-open"></i> Order Items</h3></div>
+      <div style="padding:1rem 1.5rem;display:flex;flex-direction:column;gap:.8rem">
+        {% for item in order.items %}
+        <div style="display:flex;gap:1rem;align-items:center;padding:.8rem;background:var(--bg-secondary);border-radius:14px;border:1px solid var(--border)">
+          <div style="width:56px;height:64px;border-radius:10px;overflow:hidden;background:var(--bg-card);flex-shrink:0">
+            {% if item.product_image %}
+              <img src="{{ url_for('static', filename=item.product_image) }}" style="width:100%;height:100%;object-fit:cover"/>
+            {% else %}
+              <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--gold)">
+                <i class="fas fa-gem"></i>
+              </div>
+            {% endif %}
+          </div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:.9rem;color:var(--text-primary)">{{ item.product_name }}</div>
+            <div style="font-size:.75rem;color:var(--text-muted);margin-top:.2rem">Qty: {{ item.quantity }}</div>
+          </div>
+          <div style="font-family:'Cinzel Decorative',serif;font-size:.9rem;background:var(--gold-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700">
+            ₹{{ "%.0f"|format(item.price * item.quantity) }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:.85rem;color:var(--text-muted)">Order Total</span>
+        <span style="font-family:'Cinzel Decorative',serif;font-size:1.1rem;background:var(--gold-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700">
+          ₹{{ "%.0f"|format(order.total) }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Delivery Address -->
+    <div class="admin-card" style="margin-bottom:1.5rem">
+      <div class="admin-card-header"><h3><i class="fas fa-map-marker-alt"></i> Delivery Address</h3></div>
+      <div style="padding:1.2rem 1.5rem">
+        <div style="font-weight:700;font-size:.95rem;color:var(--text-primary);margin-bottom:.4rem">{{ order.delivery_name }}</div>
+        <div style="font-size:.85rem;color:var(--text-secondary);line-height:1.7">
+          {{ order.delivery_address }}<br>
+          {{ order.delivery_city }}, {{ order.delivery_state }} — {{ order.delivery_pincode }}
+        </div>
+        {% if order.delivery_phone %}
+        <div style="font-size:.82rem;color:var(--text-muted);margin-top:.5rem">
+          <i class="fas fa-phone" style="color:var(--gold);margin-right:.4rem"></i>{{ order.delivery_phone }}
+        </div>
+        {% endif %}
+        {% if order.user.phone %}
+        <a href="https://wa.me/91{{ order.user.phone|replace(' ','')|replace('-','') }}?text={{ ('Hi ' + order.user.name + ', your Sri Pavani order ' + order.order_number + ' update: ')|urlencode }}"
+           target="_blank"
+           style="display:inline-flex;align-items:center;gap:.5rem;margin-top:.8rem;padding:.45rem 1.1rem;border-radius:20px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);color:#25d366;font-size:.78rem;font-weight:600;text-decoration:none">
+          <i class="fab fa-whatsapp"></i> Message Customer
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Admin Note & Delivery -->
+    <div class="admin-card">
+      <div class="admin-card-header"><h3><i class="fas fa-edit"></i> Update Delivery & Notes</h3></div>
+      <div class="admin-card-body">
+        <form method="POST" action="{{ url_for('admin_orders') }}">
+          <input type="hidden" name="action" value="set_delivery"/>
+          <input type="hidden" name="order_id" value="{{ order.id }}"/>
+          <div style="display:grid;gap:1rem">
+            <div class="form-group" style="margin-bottom:0">
+              <label>Estimated Delivery</label>
+              <select name="delivery_preset" id="deliveryPreset" onchange="toggleCustom(this.value)"
+                style="width:100%;padding:.65rem .9rem;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-size:.85rem;outline:none">
+                <option value="">-- Keep current: {{ order.estimated_delivery }} --</option>
+                <option value="1-2 business days">1-2 business days</option>
+                <option value="3-5 business days">3-5 business days</option>
+                <option value="5-7 business days">5-7 business days</option>
+                <option value="7-10 business days">7-10 business days</option>
+                <option value="custom">Custom...</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;display:none" id="customDeliveryWrap">
+              <label>Custom Delivery Text</label>
+              <input type="text" name="custom_delivery" placeholder="e.g. Arriving by 25th December"
+                style="width:100%;padding:.65rem .9rem;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-size:.85rem;outline:none"/>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>Admin Note (internal)</label>
+              <textarea name="admin_note" rows="2" placeholder="Internal note about this order..."
+                style="width:100%;padding:.65rem .9rem;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-size:.85rem;resize:none;outline:none">{{ order.admin_note or '' }}</textarea>
+            </div>
+            <button type="submit" class="btn-gold" style="padding:.65rem 1.8rem;width:fit-content">
+              <i class="fas fa-save"></i> Save Details
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT -->
+  <div>
+
+    <!-- Order Info -->
+    <div class="admin-card" style="margin-bottom:1.5rem">
+      <div class="admin-card-header"><h3><i class="fas fa-info-circle"></i> Order Info</h3></div>
+      <div style="padding:1rem 1.4rem;display:flex;flex-direction:column;gap:.6rem">
+        <div style="display:flex;justify-content:space-between;font-size:.83rem">
+          <span style="color:var(--text-muted)">Order #</span>
+          <span style="font-weight:700;color:var(--gold)">{{ order.order_number }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.83rem">
+          <span style="color:var(--text-muted)">Placed on</span>
+          <span style="color:var(--text-primary)">{{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.83rem">
+          <span style="color:var(--text-muted)">Payment</span>
+          <span style="color:var(--text-primary)">{{ payment_labels.get(order.payment_method, order.payment_method) }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.83rem">
+          <span style="color:var(--text-muted)">Est. Delivery</span>
+          <span style="color:var(--gold);font-weight:600">{{ order.estimated_delivery }}</span>
+        </div>
+        {% if order.admin_note %}
+        <div style="margin-top:.3rem;padding:.6rem .8rem;background:rgba(201,168,76,.07);border:1px solid var(--border-gold);border-radius:10px;font-size:.78rem;color:var(--text-secondary)">
+          <i class="fas fa-sticky-note" style="color:var(--gold);margin-right:.4rem"></i>{{ order.admin_note }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Update Status -->
+    <div class="admin-card" style="margin-bottom:1.5rem">
+      <div class="admin-card-header"><h3><i class="fas fa-sync-alt"></i> Update Status</h3></div>
+      <div style="padding:1rem 1.4rem;display:flex;flex-direction:column;gap:.6rem">
+        <form method="POST" action="{{ url_for('admin_orders') }}">
+          <input type="hidden" name="action" value="update_status"/>
+          <input type="hidden" name="order_id" value="{{ order.id }}"/>
+          <div style="display:flex;gap:.6rem;align-items:center">
+            <select name="status"
+              style="flex:1;padding:.65rem .9rem;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-size:.85rem;outline:none">
+              {% for s in ['pending','confirmed','shipped','delivered','cancelled'] %}
+              <option value="{{ s }}" {{ 'selected' if order.status == s }}>{{ s|capitalize }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn-gold" style="padding:.65rem 1.2rem;white-space:nowrap">
+              <i class="fas fa-check"></i> Update
+            </button>
+          </div>
+        </form>
+
+        <!-- Quick Status Buttons -->
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.3rem">
+          {% for s, label, color in [('confirmed','✓ Confirm','btn-success'),('shipped','🚚 Ship','btn-warning'),('delivered','✦ Delivered','btn-success'),('cancelled','✕ Cancel','btn-danger')] %}
+          {% if order.status != s %}
+          <form method="POST" action="{{ url_for('admin_orders') }}" style="display:inline">
+            <input type="hidden" name="action" value="update_status"/>
+            <input type="hidden" name="order_id" value="{{ order.id }}"/>
+            <input type="hidden" name="status" value="{{ s }}"/>
+            <button type="submit" class="btn-sm {{ color }}" style="font-size:.72rem">{{ label }}</button>
+          </form>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Customer Info -->
+    <div class="admin-card">
+      <div class="admin-card-header"><h3><i class="fas fa-user"></i> Customer</h3></div>
+      <div style="padding:1rem 1.4rem;display:flex;flex-direction:column;gap:.5rem">
+        <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.5rem">
+          <div style="width:40px;height:40px;border-radius:50%;background:var(--gold-gradient);display:flex;align-items:center;justify-content:center;color:var(--bg-primary);font-weight:700;font-size:1rem;flex-shrink:0">
+            {{ order.user.name[0].upper() }}
+          </div>
+          <div>
+            <div style="font-weight:700;color:var(--text-primary);font-size:.9rem">{{ order.user.name }}</div>
+            <div style="font-size:.75rem;color:var(--text-muted)">{{ order.user.email }}</div>
+          </div>
+        </div>
+        {% if order.user.phone %}
+        <div style="font-size:.82rem;color:var(--text-secondary)"><i class="fas fa-phone" style="color:var(--gold);margin-right:.4rem"></i>{{ order.user.phone }}</div>
+        {% endif %}
+        <div style="font-size:.78rem;color:var(--text-muted)">
+          Member since {{ order.user.created_at.strftime('%B %Y') }}
+        </div>
+        {% if order.user.phone %}
+        <a href="https://wa.me/91{{ order.user.phone|replace(' ','')|replace('-','') }}?text={{ ('Hi ' + order.user.name + '! Your Sri Pavani order ' + order.order_number + ' (₹' + '%.0f'|format(order.total) + ') status: ' + order.status + '. Est. delivery: ' + order.estimated_delivery)|urlencode }}"
+           target="_blank"
+           style="display:inline-flex;align-items:center;gap:.5rem;margin-top:.3rem;padding:.5rem 1.1rem;border-radius:20px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);color:#25d366;font-size:.8rem;font-weight:600;text-decoration:none">
+          <i class="fab fa-whatsapp"></i> Send Status via WhatsApp
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function toggleCustom(val) {
+  document.getElementById('customDeliveryWrap').style.display = val === 'custom' ? 'block' : 'none';
+}
+</script>
+
+{% endblock %}

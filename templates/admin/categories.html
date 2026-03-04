@@ -38,8 +38,12 @@
 
 <!-- Category List -->
 <div class="admin-card">
-  <div class="admin-card-header"><h3>All Categories ({{ categories|length }})</h3></div>
-  <div style="overflow-x:auto">
+  <div class="admin-card-header">
+    <h3>All Categories ({{ categories|length }})</h3>
+  </div>
+
+  <!-- Desktop Table -->
+  <div class="resp-table-wrap">
     <table class="admin-table">
       <thead>
         <tr><th>Image</th><th>Name</th><th>Description</th><th>Status</th><th>Actions</th></tr>
@@ -61,13 +65,11 @@
             </span>
           </td>
           <td>
-            <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+            <div class="action-btns">
               <form method="POST" style="display:inline">
                 <input type="hidden" name="action" value="toggle"/>
                 <input type="hidden" name="category_id" value="{{ cat.id }}"/>
-                <button type="submit" class="btn-sm btn-warning">
-                  {{ 'Hide' if cat.is_active else 'Show' }}
-                </button>
+                <button type="submit" class="btn-sm btn-warning">{{ 'Hide' if cat.is_active else 'Show' }}</button>
               </form>
               <form method="POST" style="display:inline" onsubmit="return confirm('Delete this category?')">
                 <input type="hidden" name="action" value="delete"/>
@@ -80,6 +82,42 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
+
+  <!-- Mobile Cards -->
+  <div class="mobile-cards">
+    {% for cat in categories %}
+    <div class="mobile-card">
+      <div class="mobile-card-img">
+        {% if cat.image %}
+          <img src="{{ url_for('static', filename=cat.image) }}" alt="{{ cat.name }}"/>
+        {% else %}
+          <i class="fas fa-th-large" style="color:var(--gold);font-size:1.4rem"></i>
+        {% endif %}
+      </div>
+      <div class="mobile-card-body">
+        <div class="mobile-card-title">{{ cat.name }}</div>
+        <div class="mobile-card-meta">{{ cat.description or 'No description' }}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:.6rem;flex-wrap:wrap;gap:.5rem">
+          <span class="tag {{ 'tag-active' if cat.is_active else 'tag-inactive' }}">
+            {{ 'Active' if cat.is_active else 'Hidden' }}
+          </span>
+          <div class="action-btns">
+            <form method="POST" style="display:inline">
+              <input type="hidden" name="action" value="toggle"/>
+              <input type="hidden" name="category_id" value="{{ cat.id }}"/>
+              <button type="submit" class="btn-sm btn-warning">{{ 'Hide' if cat.is_active else 'Show' }}</button>
+            </form>
+            <form method="POST" style="display:inline" onsubmit="return confirm('Delete this category?')">
+              <input type="hidden" name="action" value="delete"/>
+              <input type="hidden" name="category_id" value="{{ cat.id }}"/>
+              <button type="submit" class="btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
   </div>
 </div>
 

@@ -1,6 +1,42 @@
 {% extends "base.html" %}
 {% block title %}My Profile — Sri Pavani{% endblock %}
 {% block content %}
+
+<!-- ══ CANCEL BLOCKED MODAL (order shipped) ══ -->
+<div class="modal-overlay" id="cancelBlockedModal">
+  <div class="modal-box">
+    <div class="modal-icon">🚚</div>
+    <h3>Order Already Shipped!</h3>
+    <p>Your order is on its way to you and cannot be cancelled at this stage. Please contact us if you have any concerns.</p>
+    <div class="modal-actions">
+      <a href="https://wa.me/919392964427" target="_blank" class="btn-gold">
+        <i class="fab fa-whatsapp"></i> Contact Us
+      </a>
+      <button class="btn-outline" onclick="document.getElementById('cancelBlockedModal').classList.remove('active')">Close</button>
+    </div>
+    <button class="modal-close" onclick="document.getElementById('cancelBlockedModal').classList.remove('active')">×</button>
+  </div>
+</div>
+
+<!-- ══ CANCEL CONFIRM MODAL ══ -->
+<div class="modal-overlay" id="cancelConfirmModal">
+  <div class="modal-box">
+    <div class="modal-icon" style="color:#ef5350">⚠️</div>
+    <h3 style="color:#ef5350">Cancel This Order?</h3>
+    <p>Are you sure you want to cancel this order? This action cannot be undone.</p>
+    <div class="modal-actions">
+      <form method="POST" action="{{ url_for('cancel_order') }}" id="cancelOrderForm">
+        <input type="hidden" name="order_id" id="cancelOrderId"/>
+        <button type="submit" style="padding:.75rem 2rem;background:linear-gradient(135deg,#c62828,#ef5350);color:#fff;border-radius:50px;font-weight:700;font-size:.9rem;border:none;cursor:pointer">
+          Yes, Cancel Order
+        </button>
+      </form>
+      <button class="btn-outline" onclick="document.getElementById('cancelConfirmModal').classList.remove('active')">Keep Order</button>
+    </div>
+    <button class="modal-close" onclick="document.getElementById('cancelConfirmModal').classList.remove('active')">×</button>
+  </div>
+</div>
+
 <div style="background:var(--ombre-hero);padding:3rem 2rem 2rem;border-bottom:1px solid var(--border);">
   <div style="text-align:center;">
     <span class="section-eyebrow">My Account</span>
@@ -131,5 +167,184 @@
     </div>
     {% endif %}
   </div>
+
+  <!-- ══ ORDER HISTORY ══ -->
+  {% if orders %}
+  <div style="margin-top:2rem">
+    <div style="margin-bottom:1.5rem">
+      <span class="section-eyebrow">History</span>
+      <h2 class="section-title" style="font-size:1.4rem;text-align:left">My Orders</h2>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:1.2rem">
+      {% for order in orders %}
+      {% set sc = status_colors.get(order.status, ('rgba(100,100,100,.15)','#aaa')) %}
+
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:20px;overflow:hidden;transition:border-color .3s"
+           onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
+
+        <!-- Order Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.4rem;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:.6rem;background:var(--bg-secondary)">
+          <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+            <div style="font-family:'Cinzel Decorative',serif;font-size:.85rem;color:var(--gold)">
+              {{ order.order_number }}
+            </div>
+            <span style="display:inline-block;padding:.2rem .8rem;border-radius:20px;font-size:.68rem;font-weight:700;
+                         background:{{ sc[0] }};color:{{ sc[1] }};border:1px solid {{ sc[1] }}30;letter-spacing:.08em">
+              {{ order.status|upper }}
+            </span>
+            <span style="font-size:.75rem;color:var(--text-muted)">
+              <i class="fas fa-calendar-alt" style="color:var(--gold)"></i>
+              {{ order.created_at.strftime('%d %b %Y') }}
+            </span>
+          </div>
+          <div style="font-family:'Cinzel Decorative',serif;font-size:.95rem;background:var(--gold-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700">
+            ₹{{ "%.0f"|format(order.total) }}
+          </div>
+        </div>
+
+        <!-- Order Items Preview -->
+        <div style="padding:1rem 1.4rem">
+          <div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem">
+            {% for item in order.items %}
+            <div style="display:flex;align-items:center;gap:.6rem;background:var(--bg-secondary);border-radius:12px;padding:.5rem .8rem;border:1px solid var(--border)">
+              <div style="width:36px;height:40px;border-radius:7px;overflow:hidden;background:var(--bg-card);flex-shrink:0">
+                {% if item.product_image %}
+                  <img src="{{ url_for('static', filename=item.product_image) }}" style="width:100%;height:100%;object-fit:cover"/>
+                {% else %}
+                  <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:.6rem">
+                    <i class="fas fa-gem"></i>
+                  </div>
+                {% endif %}
+              </div>
+              <div>
+                <div style="font-size:.8rem;font-weight:600;color:var(--text-primary)">{{ item.product_name }}</div>
+                <div style="font-size:.7rem;color:var(--text-muted)">Qty: {{ item.quantity }} · ₹{{ "%.0f"|format(item.price) }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- Payment + Delivery Info Row -->
+          <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;font-size:.78rem;color:var(--text-muted);margin-bottom:.8rem">
+            <span><i class="fas fa-credit-card" style="color:var(--gold)"></i> {{ payment_labels.get(order.payment_method, order.payment_method) }}</span>
+            <span><i class="fas fa-truck" style="color:var(--gold)"></i> {{ order.estimated_delivery }}</span>
+          </div>
+
+          <!-- Order Progress Bar -->
+          <div style="display:flex;align-items:center;margin-bottom:1rem">
+            {% set steps = [('pending','fa-clock','Ordered'),('confirmed','fa-check','Confirmed'),('shipped','fa-truck','Shipped'),('delivered','fa-home','Delivered')] %}
+            {% set step_order = ['pending','confirmed','shipped','delivered'] %}
+            {% set cur_idx = step_order.index(order.status) if order.status in step_order else -1 %}
+            {% for sid, icon, slabel in steps %}
+            {% set s_idx = loop.index0 %}
+            <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem;flex:1">
+              <div style="width:30px;height:30px;border-radius:50%;
+                          background:{% if order.status == 'cancelled' %}rgba(229,115,115,.2){% elif s_idx <= cur_idx %}var(--gold-gradient){% else %}var(--bg-secondary){% endif %};
+                          border:2px solid {% if order.status == 'cancelled' %}#ef5350{% elif s_idx <= cur_idx %}transparent{% else %}var(--border){% endif %};
+                          display:flex;align-items:center;justify-content:center;font-size:.7rem;
+                          color:{% if order.status == 'cancelled' %}#ef5350{% elif s_idx <= cur_idx %}var(--bg-primary){% else %}var(--text-muted){% endif %}">
+                {% if order.status == 'cancelled' and s_idx == 0 %}
+                  <i class="fas fa-times"></i>
+                {% else %}
+                  <i class="fas {{ icon }}"></i>
+                {% endif %}
+              </div>
+              <span style="font-size:.6rem;color:{% if s_idx <= cur_idx %}var(--gold){% else %}var(--text-muted){% endif %};text-align:center;letter-spacing:.03em">{{ slabel }}</span>
+            </div>
+            {% if not loop.last %}
+            <div style="flex:1;height:2px;background:{% if s_idx < cur_idx %}var(--gold-gradient){% else %}var(--border){% endif %};margin-bottom:1.1rem;min-width:20px"></div>
+            {% endif %}
+            {% endfor %}
+          </div>
+
+          <!-- Admin Note if any -->
+          {% if order.admin_note %}
+          <div style="background:rgba(201,168,76,.07);border:1px solid var(--border-gold);border-radius:10px;padding:.6rem .9rem;font-size:.78rem;color:var(--text-secondary);margin-bottom:.8rem">
+            <i class="fas fa-info-circle" style="color:var(--gold);margin-right:.4rem"></i>{{ order.admin_note }}
+          </div>
+          {% endif %}
+
+          <!-- ══ DELIVERED — JEWELLERY CARE BANNER ══ -->
+          {% if order.status == 'delivered' %}
+          <div style="background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(201,168,76,.05));border:1px solid var(--border-gold);border-radius:14px;padding:1rem 1.2rem;margin-bottom:.8rem;display:flex;align-items:flex-start;gap:.9rem">
+            <div style="font-size:1.8rem;flex-shrink:0">✨</div>
+            <div>
+              <div style="font-family:'Cinzel Decorative',serif;font-size:.8rem;color:var(--gold);margin-bottom:.3rem;letter-spacing:.05em">
+                Jewellery Care & Polishing
+              </div>
+              <div style="font-size:.78rem;color:var(--text-secondary);line-height:1.6;margin-bottom:.6rem">
+                Is your jewellery's colour fading or does it need re-polishing? We're here to help restore its original shine and beauty.
+              </div>
+              <a href="https://wa.me/919392964427?text={{ ('Hi! I received my Sri Pavani order ' + order.order_number + ' and I need help with jewellery care / polishing. Can you assist?')|urlencode }}"
+                 target="_blank"
+                 style="display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1.2rem;border-radius:50px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);color:#25d366;font-size:.78rem;font-weight:700;text-decoration:none">
+                <i class="fab fa-whatsapp"></i> Contact: +91 93929 64427
+              </a>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Action Buttons -->
+          <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
+
+            {% if order.status == 'cancelled' %}
+            <!-- Cancelled badge only -->
+            <span style="padding:.45rem 1.1rem;border-radius:50px;background:rgba(229,115,115,.12);border:1px solid rgba(229,115,115,.3);color:#ef5350;font-size:.78rem;font-weight:600">
+              <i class="fas fa-times-circle"></i> Order Cancelled
+            </span>
+
+            {% elif order.status == 'delivered' %}
+            <!-- Re-order button -->
+            <a href="{{ url_for('all_products') }}"
+               style="display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.2rem;border-radius:50px;background:var(--gold-gradient);color:var(--bg-primary);font-size:.78rem;font-weight:700;text-decoration:none">
+              <i class="fas fa-redo"></i> Shop Again
+            </a>
+
+            {% elif order.status == 'shipped' %}
+            <!-- Cannot cancel – shipped -->
+            <button onclick="document.getElementById('cancelBlockedModal').classList.add('active')"
+              style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1.1rem;border-radius:50px;background:rgba(229,115,115,.1);border:1px solid rgba(229,115,115,.25);color:#ef5350;font-size:.78rem;font-weight:600;cursor:pointer">
+              <i class="fas fa-ban"></i> Cancel Order
+            </button>
+
+            {% else %}
+            <!-- pending / confirmed — can cancel -->
+            <button onclick="openCancelModal('{{ order.id }}')"
+              style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1.1rem;border-radius:50px;background:rgba(229,115,115,.1);border:1px solid rgba(229,115,115,.3);color:#ef5350;font-size:.78rem;font-weight:600;cursor:pointer">
+              <i class="fas fa-times-circle"></i> Cancel Order
+            </button>
+            {% endif %}
+
+            <!-- WhatsApp support for all non-cancelled orders -->
+            {% if order.status != 'cancelled' %}
+            <a href="https://wa.me/919392964427?text={{ ('Hi! I have a query about my Sri Pavani order ' + order.order_number + '.')|urlencode }}"
+               target="_blank"
+               style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1.1rem;border-radius:50px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.25);color:#25d366;font-size:.78rem;font-weight:600;text-decoration:none">
+              <i class="fab fa-whatsapp"></i> Need Help?
+            </a>
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
 </div>
+
+<script>
+function openCancelModal(orderId) {
+  document.getElementById('cancelOrderId').value = orderId;
+  document.getElementById('cancelConfirmModal').classList.add('active');
+}
+// Close modals on background click
+['cancelBlockedModal','cancelConfirmModal'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', e => { if (e.target === el) el.classList.remove('active'); });
+});
+</script>
+
 {% endblock %}

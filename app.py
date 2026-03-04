@@ -14,7 +14,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# Set your WhatsApp number here (country code + number, no + or spaces)
+# ── Set your WhatsApp number here (country code + number, no + or spaces) ──
 ADMIN_WHATSAPP_NUMBER = '919392964427'  # e.g. 919876543210
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf'}
@@ -173,6 +173,11 @@ def generate_order_number():
     return f'{prefix}-{seq:04d}'
 
 def build_whatsapp_url(order, user):
+    """
+    Builds a WhatsApp click-to-chat URL for admin notification.
+    FIX: Uses urllib.parse.quote with safe='' so all special characters
+    (newlines, spaces, punctuation) are properly percent-encoded for wa.me links.
+    """
     items_text = ', '.join(f"{i.product_name} x{i.quantity}" for i in order.items)
     pay_label  = PAYMENT_LABELS.get(order.payment_method, order.payment_method)
     msg = (
@@ -187,7 +192,8 @@ def build_whatsapp_url(order, user):
         f"{order.delivery_state} - {order.delivery_pincode}\n\n"
         f"Please visit admin panel to process the order."
     )
-    encoded = urllib.parse.quote(msg)
+    # Use quote with safe='' so newlines and all special chars are encoded
+    encoded = urllib.parse.quote(msg, safe='')
     return f"https://wa.me/{ADMIN_WHATSAPP_NUMBER}?text={encoded}"
 
 # -----------------------------------------
@@ -288,6 +294,37 @@ def edit_profile():
         flash('Profile updated!', 'success')
         return redirect(url_for('profile'))
     return render_template('edit_profile.html')
+
+# -----------------------------------------
+# CANCEL ORDER (customer)
+# -----------------------------------------
+
+@app.route('/order/cancel', methods=['POST'])
+@login_required
+def cancel_order():
+    order_id = request.form.get('order_id')
+    order = Order.query.get_or_404(order_id)
+
+    # Security: only the owner can cancel
+    if order.user_id != current_user.id:
+        flash('Unauthorised action.', 'error')
+        return redirect(url_for('profile'))
+
+    # Only allow cancellation before shipping
+    if order.status in ('pending', 'confirmed'):
+        order.status = 'cancelled'
+        db.session.commit()
+        flash(f'Order {order.order_number} has been cancelled.', 'success')
+    elif order.status == 'shipped':
+        flash('Your order has already been shipped and cannot be cancelled.', 'error')
+    elif order.status == 'delivered':
+        flash('This order has already been delivered.', 'error')
+    elif order.status == 'cancelled':
+        flash('This order is already cancelled.', 'error')
+    else:
+        flash('Unable to cancel this order.', 'error')
+
+    return redirect(url_for('profile'))
 
 # -----------------------------------------
 # CART
@@ -410,6 +447,7 @@ def place_order():
 
     db.session.commit()
 
+    # ── WhatsApp Admin Notification ──
     wa_url = None
     try:
         wa_url = build_whatsapp_url(order, current_user)
@@ -530,7 +568,14 @@ def admin_categories():
             db.session.add(cat); db.session.commit(); flash('Category added!', 'success')
         elif action == 'delete':
             cat = Category.query.get(request.form.get('category_id'))
-            if cat: db.session.delete(cat); db.session.commit(); flash('Category removed!', 'success')
+            if cat:
+                product_count = Product.query.filter_by(category_id=cat.id).count()
+                if product_count > 0:
+                    flash(f'Cannot delete "{cat.name}" — it has {product_count} product{"s" if product_count != 1 else ""} linked to it. Please delete or move those products first.', 'error')
+                else:
+                    db.session.delete(cat)
+                    db.session.commit()
+                    flash(f'Category "{cat.name}" deleted successfully.', 'success')
         elif action == 'toggle':
             cat = Category.query.get(request.form.get('category_id'))
             if cat: cat.is_active = not cat.is_active; db.session.commit()

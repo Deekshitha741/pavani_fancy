@@ -68,13 +68,34 @@
       </div>
     </div>
 
-    <!-- WhatsApp admin notification badge -->
+    <!-- WhatsApp admin notification -->
     {% if wa_url %}
-    <div style="background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.3);border-radius:12px;padding:.7rem 1rem;margin-bottom:1.2rem;font-size:.78rem;color:#25d366;display:flex;align-items:center;gap:.6rem">
-      <i class="fab fa-whatsapp" style="font-size:1.1rem"></i>
-      <span>Admin has been notified via WhatsApp</span>
+    <div style="background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.35);border-radius:14px;padding:.9rem 1.2rem;margin-bottom:1.2rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:.8rem;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:.7rem">
+          <i class="fab fa-whatsapp" style="font-size:1.4rem;color:#25d366"></i>
+          <div>
+            <div style="font-weight:700;font-size:.82rem;color:#25d366">Admin Notified via WhatsApp</div>
+            <div style="font-size:.72rem;color:var(--text-muted)">Order details sent to shop owner</div>
+          </div>
+        </div>
+        <a href="{{ wa_url }}" target="_blank" rel="noopener"
+           style="display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1.1rem;background:#25d366;color:#fff;border-radius:20px;font-size:.8rem;font-weight:700;text-decoration:none;white-space:nowrap">
+          <i class="fab fa-whatsapp"></i> Open WhatsApp
+        </a>
+      </div>
     </div>
+    <script>
+      // Auto-open WhatsApp with pre-filled order details for admin
+      (function() {
+        var waUrl = {{ wa_url | tojson }};
+        setTimeout(function() {
+          window.open(waUrl, '_blank', 'noopener,noreferrer');
+        }, 1000);
+      })();
+    </script>
     {% endif %}
+
 
     <!-- Order Progress Steps -->
     <div class="success-steps">

@@ -11,8 +11,6 @@
       <span><i class="fas fa-crop-alt" style="margin-right:.5rem"></i>Crop Product Image</span>
       <button onclick="closeCropper()" style="color:var(--text-muted);font-size:1.2rem;background:none;border:none;cursor:pointer">×</button>
     </h3>
-
-    <!-- Aspect ratio buttons -->
     <div class="crop-ratio-btns">
       <span style="font-size:.75rem;color:var(--text-muted);margin-right:.3rem">Aspect ratio:</span>
       <button class="crop-ratio-btn active" onclick="setRatio(3,4,this)">3:4 (Card)</button>
@@ -20,25 +18,17 @@
       <button class="crop-ratio-btn" onclick="setRatio(4,3,this)">4:3 (Wide)</button>
       <button class="crop-ratio-btn" onclick="setRatio(0,0,this)">Free</button>
     </div>
-
     <div class="cropper-workspace">
       <div>
         <div style="position:relative;overflow:hidden;border-radius:10px;border:1px solid var(--border);background:#000;line-height:0" id="cropContainer">
           <img id="cropperImgEl" src="" alt="Crop image"/>
-          <!-- Drag selection overlay -->
           <div id="cropOverlay" style="position:absolute;inset:0;cursor:crosshair"></div>
           <div id="cropSelection" style="position:absolute;border:2px solid var(--gold);background:rgba(201,168,76,.1);display:none;pointer-events:none"></div>
         </div>
         <div class="crop-controls">
-          <button class="btn-gold" onclick="applyCrop()" style="padding:.55rem 1.5rem;font-size:.82rem">
-            <i class="fas fa-check"></i> Use This Crop
-          </button>
-          <button class="btn-outline" onclick="resetCrop()" style="padding:.55rem 1.2rem;font-size:.82rem">
-            <i class="fas fa-undo"></i> Reset
-          </button>
-          <button class="btn-outline" onclick="closeCropper()" style="padding:.55rem 1.2rem;font-size:.82rem;color:#e57373;border-color:rgba(229,115,115,.4)">
-            Cancel
-          </button>
+          <button class="btn-gold" onclick="applyCrop()" style="padding:.55rem 1.5rem;font-size:.82rem"><i class="fas fa-check"></i> Use This Crop</button>
+          <button class="btn-outline" onclick="resetCrop()" style="padding:.55rem 1.2rem;font-size:.82rem"><i class="fas fa-undo"></i> Reset</button>
+          <button class="btn-outline" onclick="closeCropper()" style="padding:.55rem 1.2rem;font-size:.82rem;color:#e57373;border-color:rgba(229,115,115,.4)">Cancel</button>
         </div>
       </div>
       <div class="crop-preview-wrap">
@@ -84,10 +74,7 @@
           <textarea name="description" rows="2" placeholder="Describe the product..."></textarea>
         </div>
         <div class="form-group full-width">
-          <label>Product Image
-            <span style="font-size:.7rem;color:var(--text-muted);margin-left:.5rem">(you can crop after selecting)</span>
-          </label>
-          <!-- Image upload + crop preview -->
+          <label>Product Image <span style="font-size:.7rem;color:var(--text-muted);margin-left:.5rem">(you can crop after selecting)</span></label>
           <div style="display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:start">
             <div>
               <label class="file-upload-area" for="prod-img" id="imgUploadArea">
@@ -98,14 +85,11 @@
             </div>
             <div id="cropPreviewThumb" style="display:none;text-align:center">
               <p style="font-size:.72rem;color:var(--text-muted);margin-bottom:.4rem">Cropped</p>
-              <img id="cropThumbImg" style="width:100px;height:120px;object-fit:cover;border-radius:10px;border:2px solid var(--gold)" src="" alt=""/>
+              <img id="cropThumbImg" style="width:80px;height:96px;object-fit:cover;border-radius:10px;border:2px solid var(--gold)" src="" alt=""/>
               <br>
-              <button type="button" onclick="openCropper()" style="font-size:.72rem;color:var(--gold);margin-top:.4rem;text-decoration:underline;background:none;border:none;cursor:pointer">
-                Re-crop
-              </button>
+              <button type="button" onclick="openCropper()" style="font-size:.72rem;color:var(--gold);margin-top:.4rem;text-decoration:underline;background:none;border:none;cursor:pointer">Re-crop</button>
             </div>
           </div>
-          <!-- Crop button appears after image selected -->
           <button type="button" id="openCropBtn" onclick="openCropper()"
             style="display:none;margin-top:.6rem;padding:.45rem 1.2rem;border-radius:20px;border:1px solid var(--border-gold);color:var(--gold);font-size:.78rem;font-weight:600;background:none;cursor:pointer">
             <i class="fas fa-crop-alt"></i> Crop Image
@@ -113,28 +97,22 @@
         </div>
         <div class="form-group" style="grid-column:1/-1">
           <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
-            <label class="checkbox-group">
-              <input type="checkbox" name="is_new_collection"/>
-              <span>Mark as New Collection</span>
-            </label>
-            <label class="checkbox-group">
-              <input type="checkbox" name="is_best_seller"/>
-              <span>Mark as Best Seller</span>
-            </label>
+            <label class="checkbox-group"><input type="checkbox" name="is_new_collection"/><span>Mark as New Collection</span></label>
+            <label class="checkbox-group"><input type="checkbox" name="is_best_seller"/><span>Mark as Best Seller</span></label>
           </div>
         </div>
       </div>
-      <button type="submit" class="btn-gold" style="padding:.7rem 2rem;margin-top:.5rem">
-        <i class="fas fa-plus"></i> Add Product
-      </button>
+      <button type="submit" class="btn-gold" style="padding:.7rem 2rem;margin-top:.5rem"><i class="fas fa-plus"></i> Add Product</button>
     </form>
   </div>
 </div>
 
-<!-- Products Table -->
+<!-- Products List -->
 <div class="admin-card">
   <div class="admin-card-header"><h3>All Products ({{ products|length }})</h3></div>
-  <div style="overflow-x:auto">
+
+  <!-- Desktop Table -->
+  <div class="resp-table-wrap">
     <table class="admin-table">
       <thead>
         <tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Tags</th><th>Stock</th><th>Actions</th></tr>
@@ -166,7 +144,7 @@
             </span>
           </td>
           <td>
-            <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+            <div class="action-btns">
               <form method="POST" style="display:inline">
                 <input type="hidden" name="action" value="toggle_stock"/>
                 <input type="hidden" name="product_id" value="{{ product.id }}"/>
@@ -186,6 +164,47 @@
       </tbody>
     </table>
   </div>
+
+  <!-- Mobile Cards -->
+  <div class="mobile-cards">
+    {% for product in products %}
+    <div class="mobile-card">
+      <div class="mobile-card-img">
+        {% if product.image %}
+          <img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }}"/>
+        {% else %}
+          <i class="fas fa-gem" style="color:var(--gold);font-size:1.4rem"></i>
+        {% endif %}
+      </div>
+      <div class="mobile-card-body">
+        <div class="mobile-card-title">{{ product.name }}</div>
+        <div class="mobile-card-price">₹{{ "%.0f"|format(product.price) }}</div>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.5rem">
+          <span class="tag tag-gold" style="font-size:.68rem">{{ product.category.name }}</span>
+          {% if product.is_new_collection %}<span class="tag tag-active" style="font-size:.68rem">New</span>{% endif %}
+          {% if product.is_best_seller %}<span class="tag" style="background:rgba(255,183,77,.2);color:#ffb74d;font-size:.68rem">Best Seller</span>{% endif %}
+          <span class="tag {{ 'tag-inactive' if product.is_stock_out else 'tag-active' }}" style="font-size:.68rem">
+            {{ 'Out of Stock' if product.is_stock_out else 'In Stock' }}
+          </span>
+        </div>
+        <div class="action-btns">
+          <form method="POST" style="display:inline">
+            <input type="hidden" name="action" value="toggle_stock"/>
+            <input type="hidden" name="product_id" value="{{ product.id }}"/>
+            <button type="submit" class="btn-sm btn-warning" style="font-size:.7rem">
+              {{ 'Mark In Stock' if product.is_stock_out else 'Out of Stock' }}
+            </button>
+          </form>
+          <form method="POST" style="display:inline" onsubmit="return confirm('Delete this product?')">
+            <input type="hidden" name="action" value="delete"/>
+            <input type="hidden" name="product_id" value="{{ product.id }}"/>
+            <button type="submit" class="btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
 </div>
 
 <script>
@@ -195,15 +214,14 @@ let cropRatioW = 3, cropRatioH = 4;
 let isDragging = false;
 let startX, startY, cropX, cropY, cropW, cropH;
 
-const imgEl = document.getElementById('cropperImgEl');
-const overlay = document.getElementById('cropOverlay');
-const selection = document.getElementById('cropSelection');
+const imgEl         = document.getElementById('cropperImgEl');
+const overlay       = document.getElementById('cropOverlay');
+const selection     = document.getElementById('cropSelection');
 const previewCanvas = document.getElementById('cropPreviewCanvas');
-const container = document.getElementById('cropContainer');
-const thumbImg = document.getElementById('cropThumbImg');
-const thumbWrap = document.getElementById('cropPreviewThumb');
+const container     = document.getElementById('cropContainer');
+const thumbImg      = document.getElementById('cropThumbImg');
+const thumbWrap     = document.getElementById('cropPreviewThumb');
 
-// File input change
 document.getElementById('prod-img').addEventListener('change', function() {
   if (!this.files.length) return;
   const file = this.files[0];
@@ -220,99 +238,62 @@ function openCropper() {
   if (!originalImageSrc) return;
   imgEl.src = originalImageSrc;
   document.getElementById('cropperModal').classList.add('active');
-  imgEl.onload = () => {
-    resetCrop();
-    drawPreview();
-  };
+  imgEl.onload = () => { resetCrop(); drawPreview(); };
 }
-
-function closeCropper() {
-  document.getElementById('cropperModal').classList.remove('active');
-}
-
+function closeCropper() { document.getElementById('cropperModal').classList.remove('active'); }
 function setRatio(w, h, btn) {
   cropRatioW = w; cropRatioH = h;
   document.querySelectorAll('.crop-ratio-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   resetCrop();
 }
-
 function resetCrop() {
-  const img = imgEl;
-  const iw = img.naturalWidth, ih = img.naturalHeight;
-  const dispW = img.offsetWidth, dispH = img.offsetHeight;
-
+  const dispW = imgEl.offsetWidth, dispH = imgEl.offsetHeight;
   if (cropRatioW && cropRatioH) {
-    // Calculate crop box matching ratio
-    let cw = dispW * 0.85;
-    let ch = cw * (cropRatioH / cropRatioW);
+    let cw = dispW * 0.85, ch = cw * (cropRatioH / cropRatioW);
     if (ch > dispH * 0.85) { ch = dispH * 0.85; cw = ch * (cropRatioW / cropRatioH); }
-    cropX = (dispW - cw) / 2;
-    cropY = (dispH - ch) / 2;
+    cropX = (dispW - cw) / 2; cropY = (dispH - ch) / 2;
     cropW = cw; cropH = ch;
   } else {
     cropX = dispW * 0.1; cropY = dispH * 0.1;
     cropW = dispW * 0.8; cropH = dispH * 0.8;
   }
-  updateSelectionUI();
-  drawPreview();
+  updateSelectionUI(); drawPreview();
 }
-
 function updateSelectionUI() {
   selection.style.display = 'block';
-  selection.style.left = cropX + 'px';
-  selection.style.top = cropY + 'px';
-  selection.style.width = cropW + 'px';
-  selection.style.height = cropH + 'px';
+  selection.style.left = cropX + 'px'; selection.style.top = cropY + 'px';
+  selection.style.width = cropW + 'px'; selection.style.height = cropH + 'px';
 }
-
-// Drag to select crop area
 overlay.addEventListener('mousedown', e => {
   const rect = container.getBoundingClientRect();
-  startX = e.clientX - rect.left;
-  startY = e.clientY - rect.top;
-  cropX = startX; cropY = startY; cropW = 0; cropH = 0;
-  isDragging = true;
+  startX = e.clientX - rect.left; startY = e.clientY - rect.top;
+  cropX = startX; cropY = startY; cropW = 0; cropH = 0; isDragging = true;
 });
-
 overlay.addEventListener('mousemove', e => {
   if (!isDragging) return;
   const rect = container.getBoundingClientRect();
   const curX = Math.max(0, Math.min(e.clientX - rect.left, container.offsetWidth));
   const curY = Math.max(0, Math.min(e.clientY - rect.top, container.offsetHeight));
-
   let dx = curX - startX, dy = curY - startY;
-
   if (cropRatioW && cropRatioH) {
-    // Lock ratio
-    const targetRatio = cropRatioW / cropRatioH;
-    if (Math.abs(dx) > Math.abs(dy)) { dy = dx / targetRatio; }
-    else { dx = dy * targetRatio; }
+    const r = cropRatioW / cropRatioH;
+    if (Math.abs(dx) > Math.abs(dy)) dy = dx / r; else dx = dy * r;
   }
-
   cropX = dx < 0 ? startX + dx : startX;
   cropY = dy < 0 ? startY + dy : startY;
   cropW = Math.abs(dx); cropH = Math.abs(dy);
-
-  updateSelectionUI();
-  drawPreview();
+  updateSelectionUI(); drawPreview();
 });
-
 overlay.addEventListener('mouseup', () => { isDragging = false; });
-
-// Touch support
 overlay.addEventListener('touchstart', e => {
-  const t = e.touches[0];
-  const rect = container.getBoundingClientRect();
+  const t = e.touches[0], rect = container.getBoundingClientRect();
   startX = t.clientX - rect.left; startY = t.clientY - rect.top;
-  cropX = startX; cropY = startY; cropW = 0; cropH = 0;
-  isDragging = true;
+  cropX = startX; cropY = startY; cropW = 0; cropH = 0; isDragging = true;
 }, {passive:true});
-
 overlay.addEventListener('touchmove', e => {
   if (!isDragging) return;
-  const t = e.touches[0];
-  const rect = container.getBoundingClientRect();
+  const t = e.touches[0], rect = container.getBoundingClientRect();
   const curX = Math.max(0, Math.min(t.clientX - rect.left, container.offsetWidth));
   const curY = Math.max(0, Math.min(t.clientY - rect.top, container.offsetHeight));
   let dx = curX - startX, dy = curY - startY;
@@ -325,43 +306,30 @@ overlay.addEventListener('touchmove', e => {
   cropW = Math.abs(dx); cropH = Math.abs(dy);
   updateSelectionUI(); drawPreview();
 }, {passive:true});
-
 overlay.addEventListener('touchend', () => { isDragging = false; });
-
 function drawPreview() {
   if (!imgEl.naturalWidth) return;
-  const canvas = previewCanvas;
-  const ctx = canvas.getContext('2d');
+  const ctx = previewCanvas.getContext('2d');
   const scaleX = imgEl.naturalWidth / imgEl.offsetWidth;
   const scaleY = imgEl.naturalHeight / imgEl.offsetHeight;
-  const sx = cropX * scaleX, sy = cropY * scaleY;
-  const sw = cropW * scaleX, sh = cropH * scaleY;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (sw > 0 && sh > 0) {
-    ctx.drawImage(imgEl, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-  }
+  ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+  if (cropW > 0 && cropH > 0)
+    ctx.drawImage(imgEl, cropX*scaleX, cropY*scaleY, cropW*scaleX, cropH*scaleY, 0, 0, previewCanvas.width, previewCanvas.height);
 }
-
 function applyCrop() {
   if (!imgEl.naturalWidth || cropW < 5 || cropH < 5) {
-    // No crop selected, use full image
     document.getElementById('croppedImageData').value = originalImageSrc;
-    thumbImg.src = originalImageSrc;
-    thumbWrap.style.display = 'block';
-    closeCropper();
-    return;
+    thumbImg.src = originalImageSrc; thumbWrap.style.display = 'block'; closeCropper(); return;
   }
   const canvas = document.createElement('canvas');
-  canvas.width = 600; canvas.height = 720; // Fixed output size
+  canvas.width = 600; canvas.height = 720;
   const ctx = canvas.getContext('2d');
   const scaleX = imgEl.naturalWidth / imgEl.offsetWidth;
   const scaleY = imgEl.naturalHeight / imgEl.offsetHeight;
-  ctx.drawImage(imgEl, cropX * scaleX, cropY * scaleY, cropW * scaleX, cropH * scaleY, 0, 0, 600, 720);
+  ctx.drawImage(imgEl, cropX*scaleX, cropY*scaleY, cropW*scaleX, cropH*scaleY, 0, 0, 600, 720);
   const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
   document.getElementById('croppedImageData').value = dataUrl;
-  thumbImg.src = dataUrl;
-  thumbWrap.style.display = 'block';
-  closeCropper();
+  thumbImg.src = dataUrl; thumbWrap.style.display = 'block'; closeCropper();
 }
 </script>
 

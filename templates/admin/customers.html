@@ -8,8 +8,11 @@
   <div class="admin-card-header">
     <h3><i class="fas fa-users" style="margin-right:0.5rem"></i> All Registered Customers ({{ customers|length }})</h3>
   </div>
+
   {% if customers %}
-  <div style="overflow-x:auto">
+
+  <!-- Desktop Table -->
+  <div class="resp-table-wrap">
     <table class="admin-table">
       <thead>
         <tr>
@@ -40,8 +43,29 @@
       </tbody>
     </table>
   </div>
+
+  <!-- Mobile Cards -->
+  <div class="mobile-cards">
+    {% for user in customers %}
+    <div class="customer-mobile-card">
+      <div class="customer-avatar">{{ user.name[0].upper() }}</div>
+      <div class="customer-mobile-info">
+        <div class="customer-mobile-name">{{ user.name }}</div>
+        <div class="customer-mobile-email">{{ user.email }}</div>
+        <div class="customer-mobile-meta">
+          {% if user.phone %}<span><i class="fas fa-phone" style="color:var(--gold)"></i> {{ user.phone }}</span>{% endif %}
+          {% if user.city %}<span><i class="fas fa-map-marker-alt" style="color:var(--gold)"></i> {{ user.city }}{% if user.state %}, {{ user.state }}{% endif %}</span>{% endif %}
+          {% if user.gender %}<span><i class="fas fa-user" style="color:var(--gold)"></i> {{ user.gender }}</span>{% endif %}
+          <span><i class="fas fa-calendar-alt" style="color:var(--gold)"></i> {{ user.created_at.strftime('%d %b %Y') }}</span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
   {% else %}
   <div style="text-align:center;padding:3rem;color:var(--text-muted)">
+    <i class="fas fa-users" style="font-size:2.5rem;color:var(--gold);opacity:.3;display:block;margin-bottom:1rem"></i>
     <p>No customers registered yet.</p>
   </div>
   {% endif %}

@@ -1,0 +1,150 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Orders — Admin{% endblock %}
+{% block content %}
+
+<h1 class="admin-page-title">✦ Orders</h1>
+
+<!-- Stats Row -->
+<div class="stats-grid" style="margin-bottom:2rem">
+  <div class="stat-card">
+    <div class="stat-icon"><i class="fas fa-shopping-bag"></i></div>
+    <div class="stat-number">{{ orders|length }}</div>
+    <div class="stat-label">{{ 'Filtered' if status_filter else 'Total' }} Orders</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="color:#ffb74d"><i class="fas fa-clock"></i></div>
+    <div class="stat-number" style="background:linear-gradient(135deg,#ff9800,#ffb74d);-webkit-background-clip:text;-webkit-text-fill-color:transparent">
+      {{ orders|selectattr('status','equalto','pending')|list|length }}
+    </div>
+    <div class="stat-label">Pending</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="color:#ba68c8"><i class="fas fa-truck"></i></div>
+    <div class="stat-number" style="background:linear-gradient(135deg,#9c27b0,#ba68c8);-webkit-background-clip:text;-webkit-text-fill-color:transparent">
+      {{ orders|selectattr('status','equalto','shipped')|list|length }}
+    </div>
+    <div class="stat-label">Shipped</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="color:#66bb6a"><i class="fas fa-check-circle"></i></div>
+    <div class="stat-number" style="background:linear-gradient(135deg,#388e3c,#66bb6a);-webkit-background-clip:text;-webkit-text-fill-color:transparent">
+      {{ orders|selectattr('status','equalto','delivered')|list|length }}
+    </div>
+    <div class="stat-label">Delivered</div>
+  </div>
+</div>
+
+<!-- Filter Tabs -->
+<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.5rem">
+  {% for label, val in [('All Orders',''),('Pending','pending'),('Confirmed','confirmed'),('Shipped','shipped'),('Delivered','delivered'),('Cancelled','cancelled')] %}
+  <a href="{{ url_for('admin_orders') }}{% if val %}?status={{ val }}{% endif %}"
+    style="padding:.45rem 1.1rem;border-radius:50px;font-size:.78rem;font-weight:600;border:1px solid var(--border-gold);
+           color:{% if status_filter == val %}var(--bg-primary){% else %}var(--gold){% endif %};
+           background:{% if status_filter == val %}var(--gold-gradient){% else %}transparent{% endif %};
+           text-decoration:none;transition:all .2s">
+    {{ label }}
+  </a>
+  {% endfor %}
+</div>
+
+{% if orders %}
+<div class="admin-card">
+  <div style="overflow-x:auto">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Order #</th>
+          <th>Customer</th>
+          <th>Items</th>
+          <th>Total</th>
+          <th>Payment</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in orders %}
+        {% set sc = status_colors.get(order.status, ('rgba(100,100,100,.15)','#aaa')) %}
+        <tr>
+          <td>
+            <a href="{{ url_for('admin_order_detail', order_id=order.id) }}"
+               style="color:var(--gold);font-weight:700;font-size:.88rem;text-decoration:none">
+              {{ order.order_number }}
+            </a>
+          </td>
+          <td>
+            <div style="font-weight:600;font-size:.85rem">{{ order.user.name }}</div>
+            <div style="font-size:.72rem;color:var(--text-muted)">{{ order.user.email }}</div>
+          </td>
+          <td>
+            <div style="font-size:.8rem;color:var(--text-secondary)">
+              {% for item in order.items[:2] %}
+              <div>{{ item.product_name }} ×{{ item.quantity }}</div>
+              {% endfor %}
+              {% if order.items|length > 2 %}
+              <div style="color:var(--text-muted);font-size:.72rem">+{{ order.items|length - 2 }} more</div>
+              {% endif %}
+            </div>
+          </td>
+          <td style="font-family:'Cinzel Decorative',serif;font-size:.88rem;background:var(--gold-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700">
+            ₹{{ "%.0f"|format(order.total) }}
+          </td>
+          <td>
+            <span class="tag tag-gold" style="font-size:.68rem">
+              {{ payment_labels.get(order.payment_method, order.payment_method) }}
+            </span>
+          </td>
+          <td>
+            <span style="display:inline-block;padding:.25rem .8rem;border-radius:20px;font-size:.72rem;font-weight:700;
+                         background:{{ sc[0] }};color:{{ sc[1] }};border:1px solid {{ sc[1] }}30;letter-spacing:.05em">
+              {{ order.status|upper }}
+            </span>
+          </td>
+          <td style="font-size:.78rem;color:var(--text-muted)">
+            {{ order.created_at.strftime('%d %b %Y') }}<br>
+            <span style="font-size:.68rem">{{ order.created_at.strftime('%I:%M %p') }}</span>
+          </td>
+          <td>
+            <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
+              <a href="{{ url_for('admin_order_detail', order_id=order.id) }}"
+                 class="btn-sm btn-success" style="font-size:.72rem">
+                <i class="fas fa-eye"></i> View
+              </a>
+              <!-- Quick Status Update -->
+              <form method="POST" style="display:inline">
+                <input type="hidden" name="action" value="update_status"/>
+                <input type="hidden" name="order_id" value="{{ order.id }}"/>
+                <select name="status" onchange="this.form.submit()"
+                  style="padding:.3rem .5rem;border-radius:8px;background:var(--input-bg);border:1px solid var(--border);
+                         color:var(--text-primary);font-size:.72rem;cursor:pointer">
+                  {% for s in ['pending','confirmed','shipped','delivered','cancelled'] %}
+                  <option value="{{ s }}" {{ 'selected' if order.status == s }}>{{ s|capitalize }}</option>
+                  {% endfor %}
+                </select>
+              </form>
+              <!-- WhatsApp Customer Notify -->
+              {% if order.user.phone %}
+              <a href="https://wa.me/91{{ order.user.phone|replace(' ','')|replace('-','') }}?text={{ ('Order Update: Your Sri Pavani order ' + order.order_number + ' status is now ' + order.status + '. Thank you!')|urlencode }}"
+                 target="_blank" class="btn-sm"
+                 style="background:rgba(37,211,102,.15);color:#25d366;border:1px solid rgba(37,211,102,.3);font-size:.72rem"
+                 title="Notify Customer on WhatsApp">
+                <i class="fab fa-whatsapp"></i>
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div style="text-align:center;padding:5rem 2rem;color:var(--text-muted)">
+  <i class="fas fa-shopping-bag" style="font-size:3rem;color:var(--gold);opacity:.3;display:block;margin-bottom:1rem"></i>
+  <p>No orders found{% if status_filter %} with status "{{ status_filter }}"{% endif %}.</p>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -2,6 +2,15 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8"/>
+  <!-- Immediately apply saved theme to prevent flash of wrong theme -->
+  <script>
+    (function(){
+      try {
+        var t = localStorage.getItem('sp-theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch(e) {}
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{% block title %}Admin — Sri Pavani{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -64,6 +73,49 @@
     </div>
   </div>
 </main>
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+(function(){
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    try { localStorage.setItem('sp-theme', t); } catch(e){}
+    var ic = document.getElementById('themeIcon');
+    if (ic) ic.className = (t === 'dark') ? 'fas fa-sun' : 'fas fa-moon';
+    var btn = document.getElementById('themeToggle');
+    if (btn) btn.title = (t === 'dark') ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+  }
+  // Apply on load
+  var saved = 'dark';
+  try { saved = localStorage.getItem('sp-theme') || 'dark'; } catch(e){}
+  applyTheme(saved);
+
+  // Wire toggle button after DOM ready
+  document.addEventListener('DOMContentLoaded', function() {
+    var btn = document.getElementById('themeToggle');
+    if (btn) {
+      btn.onclick = function(e) {
+        e.preventDefault();
+        var cur = document.documentElement.getAttribute('data-theme') || 'dark';
+        applyTheme(cur === 'dark' ? 'light' : 'dark');
+      };
+    }
+    // Sidebar toggle
+    var ham = document.getElementById('adminHamburger');
+    var sidebar = document.getElementById('adminSidebar');
+    var overlay = document.getElementById('adminOverlay');
+    var closeBtn = document.getElementById('adminCloseBtn');
+    function openSidebar() {
+      if (sidebar) sidebar.classList.add('open');
+      if (overlay) overlay.classList.add('active');
+    }
+    function closeSidebar() {
+      if (sidebar) sidebar.classList.remove('open');
+      if (overlay) overlay.classList.remove('active');
+    }
+    if (ham) ham.onclick = openSidebar;
+    if (closeBtn) closeBtn.onclick = closeSidebar;
+    if (overlay) overlay.onclick = closeSidebar;
+  });
+})();
+</script>
 </body>
 </html>

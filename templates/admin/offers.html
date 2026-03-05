@@ -4,6 +4,79 @@
 
 <h1 class="admin-page-title">✦ Offers & Banners</h1>
 
+<!-- ══════════════════════════════
+     POPUP MODAL SYSTEM
+══════════════════════════════ -->
+
+<div id="popupOverlay" onclick="closePopup()"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9998;backdrop-filter:blur(3px)"></div>
+
+<div id="popupCard"
+  style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+         z-index:9999;width:min(420px,90vw);
+         background:var(--bg-card);border-radius:20px;
+         border:1px solid var(--border-gold);
+         box-shadow:0 24px 60px rgba(0,0,0,.55);
+         padding:2rem 1.8rem 1.6rem;text-align:center;
+         animation:popIn .28s cubic-bezier(.34,1.56,.64,1)">
+
+  <style>
+    @keyframes popIn {
+      from { opacity:0; transform:translate(-50%,-50%) scale(.85); }
+      to   { opacity:1; transform:translate(-50%,-50%) scale(1); }
+    }
+  </style>
+
+  <div id="popupIcon"
+    style="width:60px;height:60px;border-radius:50%;display:flex;align-items:center;
+           justify-content:center;font-size:1.6rem;margin:0 auto 1rem"></div>
+  <div id="popupTitle"
+    style="font-family:'Cinzel Decorative',serif;font-size:1rem;font-weight:700;
+           color:var(--text-primary);margin-bottom:.55rem"></div>
+  <div id="popupMsg"
+    style="font-size:.88rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.4rem"></div>
+  <div id="popupBtns" style="display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap"></div>
+</div>
+
+<!-- ══════════════════════════
+     CONFIRM DELETE MODAL
+══════════════════════════════ -->
+<div id="deleteOfferModal" onclick="if(event.target===this)closeDeleteModal()"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9998;backdrop-filter:blur(3px)">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+              width:min(400px,90vw);background:var(--bg-card);border-radius:20px;
+              border:1px solid rgba(229,115,115,.4);
+              box-shadow:0 24px 60px rgba(0,0,0,.55);
+              padding:2rem 1.8rem 1.6rem;text-align:center;
+              animation:popIn .28s cubic-bezier(.34,1.56,.64,1)">
+    <div style="width:58px;height:58px;border-radius:50%;background:rgba(229,115,115,.15);
+                display:flex;align-items:center;justify-content:center;
+                font-size:1.5rem;margin:0 auto .9rem;color:#ef5350">
+      <i class="fas fa-trash-alt"></i>
+    </div>
+    <div style="font-family:'Cinzel Decorative',serif;font-size:.95rem;font-weight:700;
+                color:var(--text-primary);margin-bottom:.5rem">Delete Offer?</div>
+    <div style="font-size:.85rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.4rem">
+      Are you sure you want to delete <strong id="deleteOfferName" style="color:var(--gold)"></strong>?
+      This action cannot be undone.
+    </div>
+    <form id="deleteOfferForm" method="POST">
+      <input type="hidden" name="action" value="delete"/>
+      <input type="hidden" name="offer_id" id="deleteOfferId"/>
+      <div style="display:flex;gap:.7rem;justify-content:center">
+        <button type="button" onclick="closeDeleteModal()"
+          style="padding:.55rem 1.4rem;border-radius:20px;background:var(--bg-secondary);
+                 border:1px solid var(--border);color:var(--text-muted);font-size:.85rem;cursor:pointer">
+          Cancel
+        </button>
+        <button type="submit" class="btn-sm btn-danger" style="padding:.55rem 1.4rem;font-size:.85rem">
+          <i class="fas fa-trash-alt"></i> Yes, Delete
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Info Banner -->
 <div style="background:rgba(201,168,76,0.08);border:1px solid var(--border-gold);border-radius:16px;padding:1rem 1.5rem;margin-bottom:2rem;font-size:.85rem;color:var(--text-secondary)">
   <i class="fas fa-info-circle" style="color:var(--gold);margin-right:.5rem"></i>
@@ -132,11 +205,10 @@
                 <input type="hidden" name="offer_id" value="{{ offer.id }}"/>
                 <button type="submit" class="btn-sm btn-warning">{{ 'Hide' if offer.is_active else 'Show' }}</button>
               </form>
-              <form method="POST" style="display:inline" onsubmit="return confirm('Delete this offer?')">
-                <input type="hidden" name="action" value="delete"/>
-                <input type="hidden" name="offer_id" value="{{ offer.id }}"/>
-                <button type="submit" class="btn-sm btn-danger"><i class="fas fa-trash"></i></button>
-              </form>
+              <button type="button" class="btn-sm btn-danger"
+                onclick="openDeleteModal('{{ offer.id }}', '{{ offer.title|replace("'","\\'")|e }}')">
+                <i class="fas fa-trash"></i>
+              </button>
             </div>
           </td>
         </tr>
@@ -192,11 +264,10 @@
             <input type="hidden" name="offer_id" value="{{ offer.id }}"/>
             <button type="submit" class="btn-sm btn-warning">{{ 'Hide' if offer.is_active else 'Show' }}</button>
           </form>
-          <form method="POST" style="display:inline" onsubmit="return confirm('Delete this offer?')">
-            <input type="hidden" name="action" value="delete"/>
-            <input type="hidden" name="offer_id" value="{{ offer.id }}"/>
-            <button type="submit" class="btn-sm btn-danger"><i class="fas fa-trash"></i></button>
-          </form>
+          <button type="button" class="btn-sm btn-danger"
+            onclick="openDeleteModal('{{ offer.id }}', '{{ offer.title|replace("'","\\'")|e }}')">
+            <i class="fas fa-trash"></i>
+          </button>
         </div>
       </div>
     </div>
@@ -211,7 +282,80 @@
   {% endif %}
 </div>
 
+<!-- ══════════════════════════
+     POPUP + DELETE MODAL JS
+══════════════════════════════ -->
 <script>
+/* ── Generic popup ── */
+function showPopup(type, title, msg, btns) {
+  const colors = {
+    success: { bg:'rgba(76,175,80,.18)',  color:'#66bb6a', icon:'fa-check-circle' },
+    error:   { bg:'rgba(229,115,115,.18)',color:'#ef5350', icon:'fa-times-circle' },
+    warning: { bg:'rgba(255,183,77,.18)', color:'#ffb74d', icon:'fa-exclamation-triangle' },
+    info:    { bg:'rgba(201,168,76,.18)', color:'#c9a84c', icon:'fa-info-circle' },
+  };
+  const c = colors[type] || colors.info;
+  document.getElementById('popupIcon').style.background = c.bg;
+  document.getElementById('popupIcon').style.color = c.color;
+  document.getElementById('popupIcon').innerHTML = `<i class="fas ${c.icon}"></i>`;
+  document.getElementById('popupTitle').textContent = title;
+  document.getElementById('popupMsg').textContent   = msg;
+
+  const btnArea = document.getElementById('popupBtns');
+  btnArea.innerHTML = '';
+  (btns || [{ label:'OK', primary:true }]).forEach(b => {
+    const el = document.createElement('button');
+    el.textContent = b.label;
+    el.style.cssText = `padding:.55rem 1.8rem;border-radius:20px;font-size:.88rem;font-weight:600;cursor:pointer;border:none;`;
+    if (b.primary) {
+      el.style.background = 'var(--gold-gradient)';
+      el.style.color = 'var(--bg-primary)';
+    } else {
+      el.style.background = 'var(--bg-secondary)';
+      el.style.border = '1px solid var(--border)';
+      el.style.color = 'var(--text-muted)';
+    }
+    el.onclick = b.action || closePopup;
+    btnArea.appendChild(el);
+  });
+
+  document.getElementById('popupOverlay').style.display = 'block';
+  document.getElementById('popupCard').style.display    = 'block';
+
+  if (type === 'success') setTimeout(closePopup, 3000);
+}
+
+function closePopup() {
+  document.getElementById('popupOverlay').style.display = 'none';
+  document.getElementById('popupCard').style.display    = 'none';
+}
+
+/* ── Delete modal ── */
+function openDeleteModal(offerId, offerTitle) {
+  document.getElementById('deleteOfferId').value        = offerId;
+  document.getElementById('deleteOfferName').textContent = offerTitle;
+  document.getElementById('deleteOfferModal').style.display = 'block';
+}
+function closeDeleteModal() {
+  document.getElementById('deleteOfferModal').style.display = 'none';
+}
+
+/* ── Show flash messages as popup on page load ── */
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  window.addEventListener('DOMContentLoaded', () => {
+    {% for category, message in messages %}
+    showPopup(
+      '{{ "success" if category == "success" else "error" if category == "error" else "info" }}',
+      '{{ "Done!" if category == "success" else "Oops!" if category == "error" else "Notice" }}',
+      {{ message | tojson }}
+    );
+    {% endfor %}
+  });
+  {% endif %}
+{% endwith %}
+
+/* ── Size preview bar ── */
 const sizeMap = { small: 180, medium: 280, large: 380, banner: 480 };
 const previewBar = document.getElementById('sizePreviewBar');
 document.querySelectorAll('.size-radio').forEach(radio => {

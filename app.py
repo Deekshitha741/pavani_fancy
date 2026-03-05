@@ -27,6 +27,12 @@ login_manager.login_view = 'login'
 # MODELS
 # -----------------------------------------
 
+# Many-to-many association table for Product <-> Category
+product_categories = db.Table('product_categories',
+    db.Column('product_id',  db.Integer, db.ForeignKey('product.id'),  primary_key=True),
+    db.Column('category_id', db.Integer, db.ForeignKey('category.id'), primary_key=True)
+)
+
 class User(UserMixin, db.Model):
     id            = db.Column(db.Integer, primary_key=True)
     name          = db.Column(db.String(150), nullable=False)
@@ -56,7 +62,6 @@ class Category(db.Model):
     image       = db.Column(db.String(200))
     description = db.Column(db.Text)
     is_active   = db.Column(db.Boolean, default=True)
-    products    = db.relationship('Product', backref='category', lazy=True)
 
 class Product(db.Model):
     id                = db.Column(db.Integer, primary_key=True)
@@ -65,12 +70,27 @@ class Product(db.Model):
     price             = db.Column(db.Float, nullable=False)
     weight            = db.Column(db.Float)
     image             = db.Column(db.String(200))
-    category_id       = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
+    # Legacy single category_id kept for DB compatibility during migration
+    category_id       = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True)
+    # Many-to-many: a product can belong to multiple categories
+    categories        = db.relationship('Category', secondary=product_categories,
+                                        backref=db.backref('products', lazy='dynamic'))
     is_new_collection = db.Column(db.Boolean, default=False)
     is_best_seller    = db.Column(db.Boolean, default=False)
     is_stock_out      = db.Column(db.Boolean, default=False)
     is_active         = db.Column(db.Boolean, default=True)
     created_at        = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def primary_category(self):
+        """Return first category for display purposes."""
+        if self.categories:
+            return self.categories[0]
+        return None
+
+    @property
+    def category_names(self):
+        return ', '.join(c.name for c in self.categories) if self.categories else '—'
 
 class Offer(db.Model):
     id          = db.Column(db.Integer, primary_key=True)
@@ -173,11 +193,6 @@ def generate_order_number():
     return f'{prefix}-{seq:04d}'
 
 def build_whatsapp_url(order, user):
-    """
-    Builds a WhatsApp click-to-chat URL for admin notification.
-    FIX: Uses urllib.parse.quote with safe='' so all special characters
-    (newlines, spaces, punctuation) are properly percent-encoded for wa.me links.
-    """
     items_text = ', '.join(f"{i.product_name} x{i.quantity}" for i in order.items)
     pay_label  = PAYMENT_LABELS.get(order.payment_method, order.payment_method)
     msg = (
@@ -192,7 +207,6 @@ def build_whatsapp_url(order, user):
         f"{order.delivery_state} - {order.delivery_pincode}\n\n"
         f"Please visit admin panel to process the order."
     )
-    # Use quote with safe='' so newlines and all special chars are encoded
     encoded = urllib.parse.quote(msg, safe='')
     return f"https://wa.me/{ADMIN_WHATSAPP_NUMBER}?text={encoded}"
 
@@ -217,7 +231,11 @@ def index():
 @app.route('/category/<int:category_id>')
 def category_page(category_id):
     cat = Category.query.get_or_404(category_id)
-    products = Product.query.filter_by(category_id=category_id, is_active=True).all()
+    # Get all active products that belong to this category via the many-to-many relationship
+    products = Product.query.filter(
+        Product.is_active == True,
+        Product.categories.any(id=category_id)
+    ).all()
     other_cats = Category.query.filter(Category.id != category_id, Category.is_active == True).limit(6).all()
     return render_template('category.html', category=cat, products=products, other_categories=other_cats)
 
@@ -305,12 +323,10 @@ def cancel_order():
     order_id = request.form.get('order_id')
     order = Order.query.get_or_404(order_id)
 
-    # Security: only the owner can cancel
     if order.user_id != current_user.id:
         flash('Unauthorised action.', 'error')
         return redirect(url_for('profile'))
 
-    # Only allow cancellation before shipping
     if order.status in ('pending', 'confirmed'):
         order.status = 'cancelled'
         db.session.commit()
@@ -447,7 +463,6 @@ def place_order():
 
     db.session.commit()
 
-    # ── WhatsApp Admin Notification ──
     wa_url = None
     try:
         wa_url = build_whatsapp_url(order, current_user)
@@ -569,7 +584,8 @@ def admin_categories():
         elif action == 'delete':
             cat = Category.query.get(request.form.get('category_id'))
             if cat:
-                product_count = Product.query.filter_by(category_id=cat.id).count()
+                # Check via many-to-many relationship
+                product_count = Product.query.filter(Product.categories.any(id=cat.id)).count()
                 if product_count > 0:
                     flash(f'Cannot delete "{cat.name}" — it has {product_count} product{"s" if product_count != 1 else ""} linked to it. Please delete or move those products first.', 'error')
                 else:
@@ -590,6 +606,8 @@ def admin_products():
         if action == 'add':
             price  = float(request.form.get('price', 0))
             weight = float(request.form.get('weight', 1))
+
+            # Handle cropped or regular image upload
             cropped_data = request.form.get('cropped_image_data')
             image_path   = None
             if cropped_data and cropped_data.startswith('data:image'):
@@ -606,18 +624,40 @@ def admin_products():
             else:
                 image_file = request.files.get('image')
                 image_path = save_file(image_file, 'products') if image_file else None
-            p = Product(name=request.form.get('name'), description=request.form.get('description'),
-                        price=price, weight=weight, category_id=request.form.get('category_id'),
-                        image=image_path,
-                        is_new_collection='is_new_collection' in request.form,
-                        is_best_seller='is_best_seller' in request.form)
-            db.session.add(p); db.session.commit(); flash('Product added!', 'success')
+
+            # Get selected category IDs (multiple checkboxes)
+            category_ids = request.form.getlist('category_ids')
+
+            p = Product(
+                name=request.form.get('name'),
+                description=request.form.get('description'),
+                price=price,
+                weight=weight,
+                image=image_path,
+                is_new_collection='is_new_collection' in request.form,
+                is_best_seller='is_best_seller' in request.form
+            )
+            # Assign categories
+            for cid in category_ids:
+                cat = Category.query.get(int(cid))
+                if cat:
+                    p.categories.append(cat)
+
+            db.session.add(p)
+            db.session.commit()
+            flash('Product added!', 'success')
+
         elif action == 'delete':
             p = Product.query.get(request.form.get('product_id'))
-            if p: db.session.delete(p); db.session.commit(); flash('Product removed!', 'success')
+            if p:
+                db.session.delete(p)
+                db.session.commit()
+                flash('Product removed!', 'success')
+
         elif action == 'toggle_stock':
             p = Product.query.get(request.form.get('product_id'))
             if p: p.is_stock_out = not p.is_stock_out; db.session.commit()
+
     products   = Product.query.all()
     categories = Category.query.filter_by(is_active=True).all()
     return render_template('admin/products.html', products=products, categories=categories)
@@ -677,22 +717,48 @@ def seed_data():
     ]
     for c in cats: db.session.add(c)
     db.session.commit()
+
     prods = [
-        Product(name='Classic Gold Necklace',  description='Elegant 1g gold necklace', price=5999, weight=1, category_id=1, is_best_seller=True),
-        Product(name='Temple Bangle Set',       description='Traditional temple bangles', price=7499, weight=1, category_id=2, is_new_collection=True),
-        Product(name='Jhumka Earrings',         description='Classic jhumka gold earrings', price=4299, weight=1, category_id=3, is_best_seller=True),
-        Product(name='Diamond Cut Ring',        description='Beautiful diamond-cut ring', price=3999, weight=1, category_id=4, is_new_collection=True),
-        Product(name='Rope Chain',              description='Elegant rope gold chain', price=5499, weight=1, category_id=5, is_best_seller=True),
-        Product(name='Lakshmi Pendant',         description='Auspicious Lakshmi pendant', price=2999, weight=1, category_id=6, is_new_collection=True),
-        Product(name='Choker Necklace',         description='Stunning gold choker', price=8999, weight=1, category_id=1),
-        Product(name='Kada Bangle',             description='Bold gold kada bangle', price=6799, weight=1, category_id=2),
+        ('Classic Gold Necklace',  'Elegant 1g gold necklace',      5999, 1, [1], True,  False),
+        ('Temple Bangle Set',      'Traditional temple bangles',     7499, 1, [2], False, True),
+        ('Jhumka Earrings',        'Classic jhumka gold earrings',   4299, 1, [3], True,  False),
+        ('Diamond Cut Ring',       'Beautiful diamond-cut ring',     3999, 1, [4], False, True),
+        ('Rope Chain',             'Elegant rope gold chain',        5499, 1, [5], True,  False),
+        ('Lakshmi Pendant',        'Auspicious Lakshmi pendant',     2999, 1, [6], False, True),
+        ('Choker Necklace',        'Stunning gold choker',           8999, 1, [1], False, False),
+        ('Kada Bangle',            'Bold gold kada bangle',          6799, 1, [2], False, False),
     ]
-    for p in prods: db.session.add(p)
+    for name, desc, price, weight, cat_ids, is_bs, is_nc in prods:
+        p = Product(name=name, description=desc, price=price, weight=weight,
+                    is_best_seller=is_bs, is_new_collection=is_nc)
+        for cid in cat_ids:
+            cat = Category.query.get(cid)
+            if cat:
+                p.categories.append(cat)
+        db.session.add(p)
+
     db.session.add(Offer(title='Grand Diwali Sale', subtitle='Up to 30% off on all jewellery', is_active=True, height_size='medium'))
     db.session.commit()
 
+def migrate_existing_products():
+    """
+    One-time migration: copy legacy category_id into the many-to-many table
+    for any products that already exist but have no entries in product_categories.
+    """
+    products = Product.query.all()
+    changed = False
+    for p in products:
+        if p.category_id and not p.categories:
+            cat = Category.query.get(p.category_id)
+            if cat and cat not in p.categories:
+                p.categories.append(cat)
+                changed = True
+    if changed:
+        db.session.commit()
+
 with app.app_context():
     db.create_all()
+    # Run legacy column migrations (safe to re-run — errors are suppressed)
     for sql in [
         "ALTER TABLE offer ADD COLUMN height_size VARCHAR(20) DEFAULT 'medium'",
         "ALTER TABLE offer ADD COLUMN sort_order INTEGER DEFAULT 0",
@@ -703,7 +769,47 @@ with app.app_context():
             db.session.execute(db.text(sql)); db.session.commit()
         except:
             pass
+
+    # ── Fix: make product.category_id nullable in existing SQLite databases ──
+    # SQLite does not support ALTER COLUMN, so we rebuild the product table
+    # only if the column is still NOT NULL (detected by checking the schema).
+    try:
+        result = db.session.execute(db.text("SELECT sql FROM sqlite_master WHERE type='table' AND name='product'")).fetchone()
+        if result and 'category_id INTEGER NOT NULL' in result[0]:
+            # Rebuild product table without NOT NULL on category_id
+            db.session.execute(db.text("PRAGMA foreign_keys=OFF"))
+            db.session.execute(db.text("""
+                CREATE TABLE IF NOT EXISTS product_new (
+                    id INTEGER NOT NULL PRIMARY KEY,
+                    name VARCHAR(200) NOT NULL,
+                    description TEXT,
+                    price FLOAT NOT NULL,
+                    weight FLOAT,
+                    image VARCHAR(200),
+                    category_id INTEGER REFERENCES category(id),
+                    is_new_collection BOOLEAN DEFAULT 0,
+                    is_best_seller BOOLEAN DEFAULT 0,
+                    is_stock_out BOOLEAN DEFAULT 0,
+                    is_active BOOLEAN DEFAULT 1,
+                    created_at DATETIME
+                )
+            """))
+            db.session.execute(db.text("""
+                INSERT INTO product_new
+                SELECT id, name, description, price, weight, image, category_id,
+                       is_new_collection, is_best_seller, is_stock_out, is_active, created_at
+                FROM product
+            """))
+            db.session.execute(db.text("DROP TABLE product"))
+            db.session.execute(db.text("ALTER TABLE product_new RENAME TO product"))
+            db.session.execute(db.text("PRAGMA foreign_keys=ON"))
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Migration warning: {e}")
+
     seed_data()
+    migrate_existing_products()
 
 if __name__ == '__main__':
     app.run(debug=True)

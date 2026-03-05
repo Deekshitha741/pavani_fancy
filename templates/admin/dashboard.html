@@ -8,7 +8,7 @@
   <div class="stat-card">
     <div class="stat-icon"><i class="fas fa-gem"></i></div>
     <div class="stat-number">{{ total_products }}</div>
-    <div class="stat-label">Products</div>
+    <div class="stat-label">Total Products</div>
   </div>
   <div class="stat-card">
     <div class="stat-icon"><i class="fas fa-th-large"></i></div>
@@ -20,82 +20,138 @@
     <div class="stat-number">{{ total_users }}</div>
     <div class="stat-label">Customers</div>
   </div>
-  <div class="stat-card" style="border-color:rgba(255,183,77,.4)">
-    <div class="stat-icon" style="color:#ffb74d"><i class="fas fa-shopping-bag"></i></div>
-    <div class="stat-number" style="background:linear-gradient(135deg,#ff8f00,#ffb74d);-webkit-background-clip:text;-webkit-text-fill-color:transparent">{{ total_orders }}</div>
-    <div class="stat-label">Total Orders</div>
-  </div>
-  <div class="stat-card" style="border-color:rgba(229,115,115,.4)">
-    <div class="stat-icon" style="color:#ef5350"><i class="fas fa-clock"></i></div>
-    <div class="stat-number" style="background:linear-gradient(135deg,#c62828,#ef5350);-webkit-background-clip:text;-webkit-text-fill-color:transparent">{{ pending_orders }}</div>
-    <div class="stat-label">Pending Orders</div>
-  </div>
   <div class="stat-card">
     <div class="stat-icon"><i class="fas fa-tags"></i></div>
     <div class="stat-number">{{ total_offers }}</div>
-    <div class="stat-label">Offers</div>
+    <div class="stat-label">Active Offers</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i class="fas fa-shopping-bag"></i></div>
+    <div class="stat-number">{{ total_orders }}</div>
+    <div class="stat-label">Total Orders</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="color:#ffb74d"><i class="fas fa-clock"></i></div>
+    <div class="stat-number" style="background:linear-gradient(135deg,#ff9800,#ffb74d);-webkit-background-clip:text;-webkit-text-fill-color:transparent">
+      {{ pending_orders }}
+    </div>
+    <div class="stat-label">Pending Orders</div>
   </div>
 </div>
 
-{% if pending_orders > 0 %}
-<div style="background:rgba(229,115,115,.1);border:1px solid rgba(229,115,115,.4);border-radius:16px;padding:1rem 1.5rem;margin-bottom:2rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem">
-  <div style="display:flex;align-items:center;gap:.8rem">
-    <i class="fas fa-exclamation-circle" style="color:#ef5350;font-size:1.3rem"></i>
-    <span style="font-weight:600;color:#ef5350">{{ pending_orders }} order{{ 's' if pending_orders != 1 }} waiting for your attention!</span>
+<!-- Recent Orders -->
+<div class="admin-card" style="margin-bottom:2rem">
+  <div class="admin-card-header">
+    <h3><i class="fas fa-shopping-bag" style="margin-right:.5rem"></i> Recent Orders</h3>
+    <a href="{{ url_for('admin_orders') }}" class="btn-sm btn-success">View All</a>
   </div>
-  <a href="{{ url_for('admin_orders') }}?status=pending" class="btn-sm btn-danger" style="font-size:.82rem;padding:.5rem 1.2rem">
-    <i class="fas fa-eye"></i> View Pending
-  </a>
+
+  <!-- Desktop Table -->
+  <div class="resp-table-wrap">
+    <table class="admin-table dashboard-recent-table">
+      <thead>
+        <tr><th>Order #</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th></tr>
+      </thead>
+      <tbody>
+        {% for order in recent_orders %}
+        {% set sc = status_colors.get(order.status, ('rgba(100,100,100,.15)','#aaa')) %}
+        <tr>
+          <td>
+            <a href="{{ url_for('admin_order_detail', order_id=order.id) }}"
+               style="color:var(--gold);font-weight:700;font-size:.85rem;text-decoration:none">
+              {{ order.order_number }}
+            </a>
+          </td>
+          <td style="font-weight:600;font-size:.85rem">{{ order.user.name }}</td>
+          <td style="font-size:.8rem;color:var(--text-muted)">{{ order.items|length }} item{{ 's' if order.items|length != 1 }}</td>
+          <td style="font-family:'Cinzel Decorative',serif;font-size:.85rem;background:var(--gold-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700">
+            ₹{{ "%.0f"|format(order.total) }}
+          </td>
+          <td>
+            <span style="display:inline-block;padding:.2rem .75rem;border-radius:20px;font-size:.7rem;font-weight:700;
+                         background:{{ sc[0] }};color:{{ sc[1] }};border:1px solid {{ sc[1] }}30">
+              {{ order.status|upper }}
+            </span>
+          </td>
+          <td style="font-size:.78rem;color:var(--text-muted)">{{ order.created_at.strftime('%d %b %Y') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile Cards -->
+  <div class="mobile-cards">
+    {% for order in recent_orders %}
+    {% set sc = status_colors.get(order.status, ('rgba(100,100,100,.15)','#aaa')) %}
+    <div class="order-mobile-card">
+      <div class="order-mobile-card-header">
+        <div>
+          <div class="order-mobile-card-num">
+            <a href="{{ url_for('admin_order_detail', order_id=order.id) }}" style="color:var(--gold);text-decoration:none">{{ order.order_number }}</a>
+          </div>
+          <div class="order-mobile-card-customer">{{ order.user.name }}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="order-mobile-card-total">₹{{ "%.0f"|format(order.total) }}</div>
+          <span style="display:inline-block;padding:.2rem .7rem;border-radius:20px;font-size:.65rem;font-weight:700;
+                       background:{{ sc[0] }};color:{{ sc[1] }};border:1px solid {{ sc[1] }}30;margin-top:.2rem">
+            {{ order.status|upper }}
+          </span>
+        </div>
+      </div>
+      <div class="order-mobile-card-meta">
+        <span><i class="fas fa-box" style="color:var(--gold)"></i> {{ order.items|length }} item{{ 's' if order.items|length != 1 }}</span>
+        <span><i class="fas fa-calendar-alt" style="color:var(--gold)"></i> {{ order.created_at.strftime('%d %b %Y') }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
 </div>
-{% endif %}
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
-  <div class="admin-card">
-    <div class="admin-card-header">
-      <h3><i class="fas fa-shopping-bag" style="margin-right:.5rem"></i> Recent Orders</h3>
-      <a href="{{ url_for('admin_orders') }}" class="btn-sm btn-success">View All</a>
-    </div>
-    <div style="overflow-x:auto">
-      <table class="admin-table">
-        <thead><tr><th>Order #</th><th>Customer</th><th>Amount</th><th>Status</th></tr></thead>
-        <tbody>
-          {% for order in recent_orders %}
-          {% set sc = status_colors.get(order.status, ('rgba(100,100,100,.2)','#aaa')) %}
-          <tr>
-            <td><a href="{{ url_for('admin_order_detail', order_id=order.id) }}" style="color:var(--gold);font-weight:700;font-size:.82rem">{{ order.order_number }}</a></td>
-            <td style="font-size:.82rem">{{ order.user.name }}</td>
-            <td style="font-weight:700;color:var(--gold);font-size:.82rem">&#8377;{{ "%.0f"|format(order.total) }}</td>
-            <td><span style="padding:.2rem .7rem;border-radius:20px;font-size:.68rem;font-weight:700;background:{{ sc[0] }};color:{{ sc[1] }}">{{ order.status.capitalize() }}</span></td>
-          </tr>
-          {% else %}
-          <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:2rem">No orders yet</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+<!-- Recent Customers -->
+<div class="admin-card">
+  <div class="admin-card-header">
+    <h3><i class="fas fa-users" style="margin-right:.5rem"></i> Recent Customers</h3>
+    <a href="{{ url_for('admin_customers') }}" class="btn-sm btn-success">View All</a>
   </div>
 
-  <div class="admin-card">
-    <div class="admin-card-header">
-      <h3><i class="fas fa-users" style="margin-right:.5rem"></i> Recent Customers</h3>
-      <a href="{{ url_for('admin_customers') }}" class="btn-sm btn-success">View All</a>
+  <!-- Desktop Table -->
+  <div class="resp-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr><th>Name</th><th>Email</th><th>Phone</th><th>City</th><th>Joined</th></tr>
+      </thead>
+      <tbody>
+        {% for user in recent_users %}
+        <tr>
+          <td><strong>{{ user.name }}</strong></td>
+          <td>{{ user.email }}</td>
+          <td>{{ user.phone or '—' }}</td>
+          <td>{{ user.city or '—' }}</td>
+          <td style="color:var(--text-muted);font-size:.8rem">{{ user.created_at.strftime('%d %b %Y') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile Cards -->
+  <div class="mobile-cards">
+    {% for user in recent_users %}
+    <div class="customer-mobile-card">
+      <div class="customer-avatar">{{ user.name[0].upper() }}</div>
+      <div class="customer-mobile-info">
+        <div class="customer-mobile-name">{{ user.name }}</div>
+        <div class="customer-mobile-email">{{ user.email }}</div>
+        <div class="customer-mobile-meta">
+          {% if user.phone %}<span><i class="fas fa-phone" style="color:var(--gold)"></i> {{ user.phone }}</span>{% endif %}
+          {% if user.city %}<span><i class="fas fa-map-marker-alt" style="color:var(--gold)"></i> {{ user.city }}</span>{% endif %}
+          <span><i class="fas fa-calendar-alt" style="color:var(--gold)"></i> {{ user.created_at.strftime('%d %b %Y') }}</span>
+        </div>
+      </div>
     </div>
-    <div style="overflow-x:auto">
-      <table class="admin-table">
-        <thead><tr><th>Name</th><th>Email</th><th>Joined</th></tr></thead>
-        <tbody>
-          {% for user in recent_users %}
-          <tr>
-            <td><strong style="font-size:.85rem">{{ user.name }}</strong></td>
-            <td style="font-size:.78rem;color:var(--text-muted)">{{ user.email }}</td>
-            <td style="font-size:.75rem;color:var(--text-muted)">{{ user.created_at.strftime('%d %b %Y') }}</td>
-          </tr>
-          {% else %}
-          <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:2rem">No customers yet</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    {% endfor %}
   </div>
 </div>
 

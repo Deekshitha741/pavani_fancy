@@ -4,7 +4,7 @@
 
 <h1 class="admin-page-title">✦ Orders</h1>
 
-<!-- Stats Row -->
+<!-- Stats -->
 <div class="stats-grid" style="margin-bottom:2rem">
   <div class="stat-card">
     <div class="stat-icon"><i class="fas fa-shopping-bag"></i></div>
@@ -36,12 +36,12 @@
 
 <!-- Filter Tabs -->
 <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.5rem">
-  {% for label, val in [('All Orders',''),('Pending','pending'),('Confirmed','confirmed'),('Shipped','shipped'),('Delivered','delivered'),('Cancelled','cancelled')] %}
+  {% for label, val in [('All',''),('Pending','pending'),('Confirmed','confirmed'),('Shipped','shipped'),('Delivered','delivered'),('Cancelled','cancelled')] %}
   <a href="{{ url_for('admin_orders') }}{% if val %}?status={{ val }}{% endif %}"
-    style="padding:.45rem 1.1rem;border-radius:50px;font-size:.78rem;font-weight:600;border:1px solid var(--border-gold);
+    style="padding:.45rem 1.1rem;border-radius:50px;font-size:.78rem;font-weight:600;
+           border:1px solid var(--border-gold);text-decoration:none;transition:all .2s;
            color:{% if status_filter == val %}var(--bg-primary){% else %}var(--gold){% endif %};
-           background:{% if status_filter == val %}var(--gold-gradient){% else %}transparent{% endif %};
-           text-decoration:none;transition:all .2s">
+           background:{% if status_filter == val %}var(--gold-gradient){% else %}transparent{% endif %}">
     {{ label }}
   </a>
   {% endfor %}
@@ -49,7 +49,9 @@
 
 {% if orders %}
 <div class="admin-card">
-  <div style="overflow-x:auto">
+
+  <!-- ═══ DESKTOP TABLE ═══ -->
+  <div class="resp-table-wrap">
     <table class="admin-table">
       <thead>
         <tr>
@@ -106,29 +108,28 @@
             <span style="font-size:.68rem">{{ order.created_at.strftime('%I:%M %p') }}</span>
           </td>
           <td>
-            <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
+            <div class="action-btns">
               <a href="{{ url_for('admin_order_detail', order_id=order.id) }}"
                  class="btn-sm btn-success" style="font-size:.72rem">
                 <i class="fas fa-eye"></i> View
               </a>
-              <!-- Quick Status Update -->
               <form method="POST" style="display:inline">
                 <input type="hidden" name="action" value="update_status"/>
                 <input type="hidden" name="order_id" value="{{ order.id }}"/>
                 <select name="status" onchange="this.form.submit()"
-                  style="padding:.3rem .5rem;border-radius:8px;background:var(--input-bg);border:1px solid var(--border);
-                         color:var(--text-primary);font-size:.72rem;cursor:pointer">
+                  style="padding:.3rem .5rem;border-radius:8px;background:var(--input-bg);
+                         border:1px solid var(--border);color:var(--text-primary);
+                         font-size:.72rem;cursor:pointer">
                   {% for s in ['pending','confirmed','shipped','delivered','cancelled'] %}
                   <option value="{{ s }}" {{ 'selected' if order.status == s }}>{{ s|capitalize }}</option>
                   {% endfor %}
                 </select>
               </form>
-              <!-- WhatsApp Customer Notify -->
               {% if order.user.phone %}
-              <a href="https://wa.me/91{{ order.user.phone|replace(' ','')|replace('-','') }}?text={{ ('Order Update: Your Sri Pavani order ' + order.order_number + ' status is now ' + order.status + '. Thank you!')|urlencode }}"
+              <a href="https://wa.me/91{{ order.user.phone|replace(' ','')|replace('-','') }}?text={{ ('Order Update: Your Sri Pavani order ' + order.order_number + ' is now ' + order.status)|urlencode }}"
                  target="_blank" class="btn-sm"
                  style="background:rgba(37,211,102,.15);color:#25d366;border:1px solid rgba(37,211,102,.3);font-size:.72rem"
-                 title="Notify Customer on WhatsApp">
+                 title="Notify on WhatsApp">
                 <i class="fab fa-whatsapp"></i>
               </a>
               {% endif %}
@@ -139,7 +140,76 @@
       </tbody>
     </table>
   </div>
+
+  <!-- ═══ MOBILE CARDS ═══ -->
+  <div class="mobile-cards">
+    {% for order in orders %}
+    {% set sc = status_colors.get(order.status, ('rgba(100,100,100,.15)','#aaa')) %}
+    <div class="order-mobile-card">
+
+      <!-- Top row: order number + total + status -->
+      <div class="order-mobile-card-header">
+        <div>
+          <div class="order-mobile-card-num">{{ order.order_number }}</div>
+          <div class="order-mobile-card-customer">{{ order.user.name }}</div>
+          <div style="font-size:.7rem;color:var(--text-muted);margin-top:.1rem">{{ order.user.email }}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div class="order-mobile-card-total">₹{{ "%.0f"|format(order.total) }}</div>
+          <div style="display:inline-block;padding:.2rem .75rem;border-radius:20px;font-size:.65rem;font-weight:700;
+                      background:{{ sc[0] }};color:{{ sc[1] }};border:1px solid {{ sc[1] }}30;margin-top:.25rem;letter-spacing:.05em">
+            {{ order.status|upper }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Items summary -->
+      <div class="order-mobile-card-items">
+        {% for item in order.items[:3] %}{{ item.product_name }} ×{{ item.quantity }}{% if not loop.last %},  {% endif %}{% endfor %}
+        {% if order.items|length > 3 %} &nbsp;+{{ order.items|length - 3 }} more{% endif %}
+      </div>
+
+      <!-- Meta: payment + date -->
+      <div class="order-mobile-card-meta">
+        <span><i class="fas fa-credit-card" style="color:var(--gold);margin-right:.3rem"></i>{{ payment_labels.get(order.payment_method, order.payment_method) }}</span>
+        <span><i class="fas fa-calendar-alt" style="color:var(--gold);margin-right:.3rem"></i>{{ order.created_at.strftime('%d %b %Y') }}</span>
+      </div>
+
+      <!-- Actions -->
+      <div class="order-mobile-card-actions">
+        <a href="{{ url_for('admin_order_detail', order_id=order.id) }}"
+           class="btn-sm btn-success" style="font-size:.75rem">
+          <i class="fas fa-eye"></i> View
+        </a>
+
+        <form method="POST" style="display:inline">
+          <input type="hidden" name="action" value="update_status"/>
+          <input type="hidden" name="order_id" value="{{ order.id }}"/>
+          <select name="status" onchange="this.form.submit()"
+            style="padding:.35rem .6rem;border-radius:8px;background:var(--input-bg);
+                   border:1px solid var(--border);color:var(--text-primary);
+                   font-size:.75rem;cursor:pointer">
+            {% for s in ['pending','confirmed','shipped','delivered','cancelled'] %}
+            <option value="{{ s }}" {{ 'selected' if order.status == s }}>{{ s|capitalize }}</option>
+            {% endfor %}
+          </select>
+        </form>
+
+        {% if order.user.phone %}
+        <a href="https://wa.me/91{{ order.user.phone|replace(' ','')|replace('-','') }}?text={{ ('Order Update: Your Sri Pavani order ' + order.order_number + ' is now ' + order.status)|urlencode }}"
+           target="_blank" class="btn-sm"
+           style="background:rgba(37,211,102,.15);color:#25d366;border:1px solid rgba(37,211,102,.3);font-size:.75rem">
+          <i class="fab fa-whatsapp"></i>
+        </a>
+        {% endif %}
+      </div>
+
+    </div>
+    {% endfor %}
+  </div>
+
 </div>
+
 {% else %}
 <div style="text-align:center;padding:5rem 2rem;color:var(--text-muted)">
   <i class="fas fa-shopping-bag" style="font-size:3rem;color:var(--gold);opacity:.3;display:block;margin-bottom:1rem"></i>

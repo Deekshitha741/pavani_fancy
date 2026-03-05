@@ -207,7 +207,7 @@
   <div class="resp-table-wrap">
     <table class="admin-table">
       <thead>
-        <tr><th>Image</th><th>Name</th><th>Categories</th><th>Price</th><th>Tags</th><th>Stock</th><th>Actions</th></tr>
+        <tr><th>Image</th><th>Name</th><th>Categories</th><th>Price</th><th>Sizes</th><th>Tags</th><th>Stock</th><th>Actions</th></tr>
       </thead>
       <tbody>
         {% for product in products %}
@@ -235,6 +235,23 @@
           </td>
           <td style="font-weight:700;color:var(--gold)">₹{{ "%.0f"|format(product.price) }}</td>
           <td>
+            {% if product.sizes %}
+            <div style="display:flex;flex-wrap:wrap;gap:.3rem">
+              {% for s in product.sizes %}
+              <span class="tag" style="background:rgba(255,183,77,.12);color:var(--gold);border:1px solid var(--border-gold);font-size:.68rem">
+                {{ s.name }}{% if s.price %} · ₹{{ "%.0f"|format(s.price) }}{% endif %}
+              </span>
+              {% endfor %}
+            </div>
+            {% else %}
+            <span style="color:var(--text-muted);font-size:.78rem">No sizes</span>
+            {% endif %}
+            <button type="button" class="btn-sm" onclick="toggleSizePanel({{ product.id }})"
+              style="margin-top:.4rem;font-size:.7rem;background:rgba(255,183,77,.15);color:var(--gold);border:1px solid var(--border-gold)">
+              <i class="fas fa-ruler-combined"></i> Manage
+            </button>
+          </td>
+          <td>
             {% if product.is_new_collection %}<span class="tag tag-active" style="display:block;margin-bottom:2px">New</span>{% endif %}
             {% if product.is_best_seller %}<span class="tag" style="background:rgba(255,183,77,.2);color:#ffb74d;display:block">Best Seller</span>{% endif %}
           </td>
@@ -256,6 +273,56 @@
                 onclick="openDeleteModal('{{ product.id }}', '{{ product.name|replace("'","\\'")|e }}')">
                 <i class="fas fa-trash"></i>
               </button>
+            </div>
+          </td>
+        </tr>
+        <!-- Size Management Panel -->
+        <tr id="size-panel-{{ product.id }}" style="display:none">
+          <td colspan="8" style="padding:0">
+            <div style="background:rgba(255,183,77,.05);border-top:1px solid var(--border-gold);padding:1rem 1.2rem">
+              <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.8rem">
+                <i class="fas fa-ruler-combined" style="color:var(--gold)"></i>
+                <strong style="color:var(--gold)">Sizes for {{ product.name }}</strong>
+                <small style="color:var(--text-muted)">— each size can have its own price (leave blank to use base price ₹{{ "%.0f"|format(product.price) }})</small>
+              </div>
+              <!-- Existing sizes -->
+              {% if product.sizes %}
+              <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.8rem">
+                {% for s in product.sizes %}
+                <div style="display:flex;align-items:center;gap:.4rem;background:var(--bg-card);border:1px solid var(--border-gold);border-radius:8px;padding:.3rem .7rem">
+                  <span style="color:var(--text-primary);font-size:.85rem">{{ s.name }}</span>
+                  {% if s.price %}<span style="color:var(--gold);font-size:.8rem">₹{{ "%.0f"|format(s.price) }}</span>
+                  {% else %}<span style="color:var(--text-muted);font-size:.75rem">base price</span>{% endif %}
+                  <form method="POST" style="display:inline;margin:0">
+                    <input type="hidden" name="action" value="delete_size"/>
+                    <input type="hidden" name="size_id" value="{{ s.id }}"/>
+                    <button type="submit" style="background:none;border:none;cursor:pointer;color:#ef5350;padding:0;font-size:.8rem;line-height:1" title="Remove size">&times;</button>
+                  </form>
+                </div>
+                {% endfor %}
+              </div>
+              {% else %}
+              <div style="color:var(--text-muted);font-size:.82rem;margin-bottom:.8rem">No sizes added yet. Add your first size below.</div>
+              {% endif %}
+              <!-- Add new size form -->
+              <form method="POST" style="display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap">
+                <input type="hidden" name="action" value="add_size"/>
+                <input type="hidden" name="product_id" value="{{ product.id }}"/>
+                <div style="display:flex;flex-direction:column;gap:.3rem">
+                  <label style="font-size:.75rem;color:var(--text-muted)">Size Name *</label>
+                  <input type="text" name="size_name" placeholder="e.g. Small, 6 inch, XL"
+                    style="background:var(--bg-input);border:1px solid var(--border-gold);border-radius:8px;padding:.4rem .7rem;color:var(--text-primary);font-size:.85rem;width:160px" required/>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:.3rem">
+                  <label style="font-size:.75rem;color:var(--text-muted)">Price (optional)</label>
+                  <input type="number" name="size_price" placeholder="₹ leave blank = base"
+                    step="0.01" min="0"
+                    style="background:var(--bg-input);border:1px solid var(--border-gold);border-radius:8px;padding:.4rem .7rem;color:var(--text-primary);font-size:.85rem;width:160px"/>
+                </div>
+                <button type="submit" class="btn-sm btn-primary" style="height:34px">
+                  <i class="fas fa-plus"></i> Add Size
+                </button>
+              </form>
             </div>
           </td>
         </tr>
@@ -288,6 +355,15 @@
             {{ 'Out of Stock' if product.is_stock_out else 'In Stock' }}
           </span>
         </div>
+        {% if product.sizes %}
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.5rem">
+          {% for s in product.sizes %}
+          <span style="background:rgba(255,183,77,.12);color:var(--gold);border:1px solid var(--border-gold);border-radius:6px;padding:.15rem .5rem;font-size:.68rem">
+            {{ s.name }}{% if s.price %} · ₹{{ "%.0f"|format(s.price) }}{% endif %}
+          </span>
+          {% endfor %}
+        </div>
+        {% endif %}
         <div class="action-btns">
           <form method="POST" style="display:inline">
             <input type="hidden" name="action" value="toggle_stock"/>
@@ -311,6 +387,16 @@
      POPUP + DELETE MODAL JS
 ══════════════════════════════ -->
 <script>
+/* ── Size panel toggle ── */
+function toggleSizePanel(productId) {
+  const panel = document.getElementById('size-panel-' + productId);
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  // Close all other panels first
+  document.querySelectorAll('[id^="size-panel-"]').forEach(p => p.style.display = 'none');
+  if (!isOpen) panel.style.display = 'table-row';
+}
+
 /* ── Category pill toggle ── */
 function toggleCatLabel(checkbox, catId) {
   const label = document.getElementById('cat-label-' + catId);

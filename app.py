@@ -75,6 +75,9 @@ class Product(db.Model):
     # Many-to-many: a product can belong to multiple categories
     categories        = db.relationship('Category', secondary=product_categories,
                                         backref=db.backref('products', lazy='dynamic'))
+    sizes             = db.relationship('ProductSize', backref='product', lazy=True,
+                                        cascade='all, delete-orphan',
+                                        order_by='ProductSize.sort_order')
     is_new_collection = db.Column(db.Boolean, default=False)
     is_best_seller    = db.Column(db.Boolean, default=False)
     is_stock_out      = db.Column(db.Boolean, default=False)
@@ -92,6 +95,26 @@ class Product(db.Model):
     def category_names(self):
         return ', '.join(c.name for c in self.categories) if self.categories else '—'
 
+    @property
+    def has_sizes(self):
+        return len(self.sizes) > 0
+
+    @property
+    def display_price(self):
+        """Lowest size price if sizes exist, otherwise base price."""
+        if self.sizes:
+            prices = [s.price for s in self.sizes if s.price is not None]
+            return min(prices) if prices else self.price
+        return self.price
+
+
+class ProductSize(db.Model):
+    id         = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    name       = db.Column(db.String(100), nullable=False)   # e.g. "Small", "6 inches", "XL"
+    price      = db.Column(db.Float, nullable=True)          # None = use base product price
+    sort_order = db.Column(db.Integer, default=0)
+
 class Offer(db.Model):
     id          = db.Column(db.Integer, primary_key=True)
     title       = db.Column(db.String(200))
@@ -106,8 +129,20 @@ class CartItem(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    size_id    = db.Column(db.Integer, db.ForeignKey('product_size.id'), nullable=True)
     quantity   = db.Column(db.Integer, default=1)
     product    = db.relationship('Product')
+    size       = db.relationship('ProductSize')
+
+    @property
+    def effective_price(self):
+        if self.size and self.size.price is not None:
+            return self.size.price
+        return self.product.price
+
+    @property
+    def size_label(self):
+        return self.size.name if self.size else None
 
 class Order(db.Model):
     id                 = db.Column(db.Integer, primary_key=True)
@@ -133,6 +168,7 @@ class OrderItem(db.Model):
     product_id    = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=True)
     product_name  = db.Column(db.String(200))
     product_image = db.Column(db.String(200))
+    size_name     = db.Column(db.String(100))
     price         = db.Column(db.Float)
     quantity      = db.Column(db.Integer)
     product       = db.relationship('Product')
@@ -360,16 +396,37 @@ def add_to_cart(product_id):
     product = Product.query.get_or_404(product_id)
     if product.is_stock_out:
         return jsonify({'success': False, 'message': 'Out of stock'})
-    item = CartItem.query.filter_by(user_id=current_user.id, product_id=product_id).first()
+
+    size_id = request.form.get('size_id', type=int)
+    size = None
+    if size_id:
+        size = ProductSize.query.filter_by(id=size_id, product_id=product_id).first()
+        if not size:
+            return jsonify({'success': False, 'message': 'Invalid size selected'})
+    elif product.has_sizes:
+        return jsonify({'success': False, 'message': 'Please select a size'})
+
+    # Each product+size combo is its own cart row
+    item = CartItem.query.filter_by(
+        user_id=current_user.id, product_id=product_id, size_id=size_id
+    ).first()
     if item:
         item.quantity += 1
     else:
-        item = CartItem(user_id=current_user.id, product_id=product_id)
+        item = CartItem(user_id=current_user.id, product_id=product_id, size_id=size_id)
         db.session.add(item)
     db.session.commit()
-    item  = CartItem.query.filter_by(user_id=current_user.id, product_id=product_id).first()
+
+    item  = CartItem.query.filter_by(user_id=current_user.id, product_id=product_id, size_id=size_id).first()
     count = CartItem.query.filter_by(user_id=current_user.id).count()
-    return jsonify({'success': True, 'cart_count': count, 'item_id': item.id, 'quantity': item.quantity})
+    return jsonify({
+        'success':    True,
+        'cart_count': count,
+        'item_id':    item.id,
+        'quantity':   item.quantity,
+        'size_name':  size.name if size else None,
+        'price':      item.effective_price,
+    })
 
 @app.route('/cart/update/<int:item_id>', methods=['POST'])
 @login_required
@@ -430,7 +487,7 @@ def place_order():
         flash('Your cart is empty.', 'error')
         return redirect(url_for('index'))
 
-    total          = sum(i.product.price * i.quantity for i in cart_items)
+    total          = sum(i.effective_price * i.quantity for i in cart_items)
     payment_method = request.form.get('payment_method', 'upi')
 
     order = Order(
@@ -456,7 +513,8 @@ def place_order():
             product_id    = ci.product_id,
             product_name  = ci.product.name,
             product_image = ci.product.image,
-            price         = ci.product.price,
+            size_name     = ci.size_label,
+            price         = ci.effective_price,
             quantity      = ci.quantity,
         ))
         db.session.delete(ci)
@@ -658,6 +716,27 @@ def admin_products():
             p = Product.query.get(request.form.get('product_id'))
             if p: p.is_stock_out = not p.is_stock_out; db.session.commit()
 
+        elif action == 'add_size':
+            product_id = request.form.get('product_id', type=int)
+            size_name  = request.form.get('size_name', '').strip()
+            size_price = request.form.get('size_price', '').strip()
+            if product_id and size_name:
+                count = ProductSize.query.filter_by(product_id=product_id).count()
+                s = ProductSize(
+                    product_id = product_id,
+                    name       = size_name,
+                    price      = float(size_price) if size_price else None,
+                    sort_order = count
+                )
+                db.session.add(s); db.session.commit()
+                flash(f'Size "{size_name}" added!', 'success')
+            else:
+                flash('Size name is required.', 'error')
+
+        elif action == 'delete_size':
+            s = ProductSize.query.get(request.form.get('size_id', type=int))
+            if s: db.session.delete(s); db.session.commit(); flash('Size removed!', 'success')
+
     products   = Product.query.all()
     categories = Category.query.filter_by(is_active=True).all()
     return render_template('admin/products.html', products=products, categories=categories)
@@ -764,6 +843,8 @@ with app.app_context():
         "ALTER TABLE offer ADD COLUMN sort_order INTEGER DEFAULT 0",
         "ALTER TABLE \"order\" ADD COLUMN estimated_delivery VARCHAR(100) DEFAULT '5-7 business days'",
         "ALTER TABLE \"order\" ADD COLUMN admin_note TEXT",
+        "ALTER TABLE cart_item ADD COLUMN size_id INTEGER REFERENCES product_size(id)",
+        "ALTER TABLE order_item ADD COLUMN size_name VARCHAR(100)",
     ]:
         try:
             db.session.execute(db.text(sql)); db.session.commit()

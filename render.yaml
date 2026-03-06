@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: sri-pavani-jewellery
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+    envVars:
+      - key: DATABASE_URL
+        value: postgresql://sripavani_db_user:u6vFVkUyrh4srCAYNlgd1vRzGoEtMVo6@dpg-d6l74bh5pdvs73f3lbc0-a.oregon-postgres.render.com/sripavani_db
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_ENV
+        value: production
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: ADMIN_WHATSAPP_NUMBER
+        value: "919392964427"

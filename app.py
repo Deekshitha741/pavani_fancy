@@ -6,6 +6,18 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 import os
 import urllib.parse
+import cloudinary
+import cloudinary.uploader
+from cloudinary.utils import cloudinary_url
+
+
+cloudinary.config(
+    cloud_name=os.getenv("ds8cjfwnu"),
+    api_key=os.getenv("777715392669398"),
+    api_secret=os.getenv("nA0zxVsXNJAVzxCgTj1hjOwIROw"),
+    secure=True
+)
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'sripavani-secret-key-2024'
@@ -186,13 +198,14 @@ def allowed_file(filename):
 
 def save_file(file, subfolder):
     if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
-        filename = timestamp + filename
-        path = os.path.join(app.config['UPLOAD_FOLDER'], subfolder)
-        os.makedirs(path, exist_ok=True)
-        file.save(os.path.join(path, filename))
-        return f'uploads/{subfolder}/{filename}'
+
+        result = cloudinary.uploader.upload(
+            file,
+            folder=f"sripavani/{subfolder}"
+        )
+
+        return result["secure_url"]
+
     return None
 
 def cart_count():
@@ -891,6 +904,7 @@ with app.app_context():
 
     seed_data()
     migrate_existing_products()
+
 
 if __name__ == '__main__':
     app.run(debug=True)

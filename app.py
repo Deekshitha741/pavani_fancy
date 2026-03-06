@@ -9,25 +9,34 @@ import urllib.parse
 import cloudinary
 import cloudinary.uploader
 from cloudinary.utils import cloudinary_url
+from dotenv import load_dotenv
 
+load_dotenv()
 
+# ── Cloudinary config (from environment variables) ──
 cloudinary.config(
-    cloud_name=os.getenv("ds8cjfwnu"),
-    api_key=os.getenv("777715392669398"),
-    api_secret=os.getenv("nA0zxVsXNJAVzxCgTj1hjOwIROw"),
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
     secure=True
 )
 
-
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'sripavani-secret-key-2024'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sripavani.db'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'sripavani-secret-key-2024')
+
+# ── PostgreSQL Database URI ──
+DATABASE_URL = os.getenv('DATABASE_URL', '')
+# Render gives postgres:// but SQLAlchemy needs postgresql://
+if DATABASE_URL.startswith('postgres://'):
+    DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL or 'sqlite:///sripavani.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# ── Set your WhatsApp number here (country code + number, no + or spaces) ──
-ADMIN_WHATSAPP_NUMBER = '919392964427'  # e.g. 919876543210
+# ── WhatsApp admin number ──
+ADMIN_WHATSAPP_NUMBER = os.getenv('ADMIN_WHATSAPP_NUMBER', '919392964427')
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf'}
 
@@ -39,7 +48,6 @@ login_manager.login_view = 'login'
 # MODELS
 # -----------------------------------------
 
-# Many-to-many association table for Product <-> Category
 product_categories = db.Table('product_categories',
     db.Column('product_id',  db.Integer, db.ForeignKey('product.id'),  primary_key=True),
     db.Column('category_id', db.Integer, db.ForeignKey('category.id'), primary_key=True)
@@ -71,7 +79,7 @@ class User(UserMixin, db.Model):
 class Category(db.Model):
     id          = db.Column(db.Integer, primary_key=True)
     name        = db.Column(db.String(100), nullable=False)
-    image       = db.Column(db.String(200))
+    image       = db.Column(db.String(500))
     description = db.Column(db.Text)
     is_active   = db.Column(db.Boolean, default=True)
 
@@ -81,10 +89,8 @@ class Product(db.Model):
     description       = db.Column(db.Text)
     price             = db.Column(db.Float, nullable=False)
     weight            = db.Column(db.Float)
-    image             = db.Column(db.String(200))
-    # Legacy single category_id kept for DB compatibility during migration
+    image             = db.Column(db.String(500))
     category_id       = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True)
-    # Many-to-many: a product can belong to multiple categories
     categories        = db.relationship('Category', secondary=product_categories,
                                         backref=db.backref('products', lazy='dynamic'))
     sizes             = db.relationship('ProductSize', backref='product', lazy=True,
@@ -98,7 +104,6 @@ class Product(db.Model):
 
     @property
     def primary_category(self):
-        """Return first category for display purposes."""
         if self.categories:
             return self.categories[0]
         return None
@@ -113,7 +118,6 @@ class Product(db.Model):
 
     @property
     def display_price(self):
-        """Lowest size price if sizes exist, otherwise base price."""
         if self.sizes:
             prices = [s.price for s in self.sizes if s.price is not None]
             return min(prices) if prices else self.price
@@ -123,15 +127,15 @@ class Product(db.Model):
 class ProductSize(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
-    name       = db.Column(db.String(100), nullable=False)   # e.g. "Small", "6 inches", "XL"
-    price      = db.Column(db.Float, nullable=True)          # None = use base product price
+    name       = db.Column(db.String(100), nullable=False)
+    price      = db.Column(db.Float, nullable=True)
     sort_order = db.Column(db.Integer, default=0)
 
 class Offer(db.Model):
     id          = db.Column(db.Integer, primary_key=True)
     title       = db.Column(db.String(200))
     subtitle    = db.Column(db.String(200))
-    image       = db.Column(db.String(200))
+    image       = db.Column(db.String(500))
     height_size = db.Column(db.String(20), default='medium')
     is_active   = db.Column(db.Boolean, default=True)
     sort_order  = db.Column(db.Integer, default=0)
@@ -179,7 +183,7 @@ class OrderItem(db.Model):
     order_id      = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
     product_id    = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=True)
     product_name  = db.Column(db.String(200))
-    product_image = db.Column(db.String(200))
+    product_image = db.Column(db.String(500))
     size_name     = db.Column(db.String(100))
     price         = db.Column(db.Float)
     quantity      = db.Column(db.Integer)
@@ -197,15 +201,17 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def save_file(file, subfolder):
+    """Upload to Cloudinary and return the secure URL."""
     if file and allowed_file(file.filename):
-
-        result = cloudinary.uploader.upload(
-            file,
-            folder=f"sripavani/{subfolder}"
-        )
-
-        return result["secure_url"]
-
+        try:
+            result = cloudinary.uploader.upload(
+                file,
+                folder=f"sripavani/{subfolder}"
+            )
+            return result["secure_url"]
+        except Exception as e:
+            print(f"Cloudinary upload error: {e}")
+            return None
     return None
 
 def cart_count():
@@ -280,7 +286,6 @@ def index():
 @app.route('/category/<int:category_id>')
 def category_page(category_id):
     cat = Category.query.get_or_404(category_id)
-    # Get all active products that belong to this category via the many-to-many relationship
     products = Product.query.filter(
         Product.is_active == True,
         Product.categories.any(id=category_id)
@@ -363,7 +368,7 @@ def edit_profile():
     return render_template('edit_profile.html')
 
 # -----------------------------------------
-# CANCEL ORDER (customer)
+# CANCEL ORDER
 # -----------------------------------------
 
 @app.route('/order/cancel', methods=['POST'])
@@ -371,11 +376,9 @@ def edit_profile():
 def cancel_order():
     order_id = request.form.get('order_id')
     order = Order.query.get_or_404(order_id)
-
     if order.user_id != current_user.id:
         flash('Unauthorised action.', 'error')
         return redirect(url_for('profile'))
-
     if order.status in ('pending', 'confirmed'):
         order.status = 'cancelled'
         db.session.commit()
@@ -388,7 +391,6 @@ def cancel_order():
         flash('This order is already cancelled.', 'error')
     else:
         flash('Unable to cancel this order.', 'error')
-
     return redirect(url_for('profile'))
 
 # -----------------------------------------
@@ -409,7 +411,6 @@ def add_to_cart(product_id):
     product = Product.query.get_or_404(product_id)
     if product.is_stock_out:
         return jsonify({'success': False, 'message': 'Out of stock'})
-
     size_id = request.form.get('size_id', type=int)
     size = None
     if size_id:
@@ -418,8 +419,6 @@ def add_to_cart(product_id):
             return jsonify({'success': False, 'message': 'Invalid size selected'})
     elif product.has_sizes:
         return jsonify({'success': False, 'message': 'Please select a size'})
-
-    # Each product+size combo is its own cart row
     item = CartItem.query.filter_by(
         user_id=current_user.id, product_id=product_id, size_id=size_id
     ).first()
@@ -429,7 +428,6 @@ def add_to_cart(product_id):
         item = CartItem(user_id=current_user.id, product_id=product_id, size_id=size_id)
         db.session.add(item)
     db.session.commit()
-
     item  = CartItem.query.filter_by(user_id=current_user.id, product_id=product_id, size_id=size_id).first()
     count = CartItem.query.filter_by(user_id=current_user.id).count()
     return jsonify({
@@ -499,10 +497,8 @@ def place_order():
     if not cart_items:
         flash('Your cart is empty.', 'error')
         return redirect(url_for('index'))
-
     total          = sum(i.effective_price * i.quantity for i in cart_items)
     payment_method = request.form.get('payment_method', 'upi')
-
     order = Order(
         user_id          = current_user.id,
         order_number     = generate_order_number(),
@@ -519,7 +515,6 @@ def place_order():
     )
     db.session.add(order)
     db.session.flush()
-
     for ci in cart_items:
         db.session.add(OrderItem(
             order_id      = order.id,
@@ -531,19 +526,12 @@ def place_order():
             quantity      = ci.quantity,
         ))
         db.session.delete(ci)
-
     db.session.commit()
-
     wa_url = None
     try:
         wa_url = build_whatsapp_url(order, current_user)
-        print(f"\n{'='*60}")
-        print(f"WhatsApp Admin Notification URL:")
-        print(wa_url)
-        print(f"{'='*60}\n")
     except Exception as e:
         print(f"WhatsApp build error: {e}")
-
     return render_template('order_success.html',
                            order=order, total=total,
                            payment_method=payment_method,
@@ -600,12 +588,10 @@ def admin_orders():
         if not order:
             flash('Order not found', 'error')
             return redirect(url_for('admin_orders'))
-
         if action == 'update_status':
             order.status = request.form.get('status', order.status)
             db.session.commit()
             flash(f'Order #{order.order_number} status updated to "{order.status}".', 'success')
-
         elif action == 'set_delivery':
             preset = request.form.get('delivery_preset', '')
             custom = request.form.get('custom_delivery', '').strip()
@@ -618,16 +604,13 @@ def admin_orders():
                 order.admin_note = note
             db.session.commit()
             flash(f'Delivery details updated for #{order.order_number}.', 'success')
-
         return redirect(url_for('admin_orders'))
-
     status_filter = request.args.get('status', '')
     q = Order.query
     if status_filter:
         q = q.filter_by(status=status_filter)
     orders = q.order_by(Order.created_at.desc()).all()
-    return render_template('admin/orders.html', orders=orders,
-                           status_filter=status_filter)
+    return render_template('admin/orders.html', orders=orders, status_filter=status_filter)
 
 @app.route('/admin/orders/<int:order_id>')
 @login_required
@@ -655,10 +638,9 @@ def admin_categories():
         elif action == 'delete':
             cat = Category.query.get(request.form.get('category_id'))
             if cat:
-                # Check via many-to-many relationship
                 product_count = Product.query.filter(Product.categories.any(id=cat.id)).count()
                 if product_count > 0:
-                    flash(f'Cannot delete "{cat.name}" — it has {product_count} product{"s" if product_count != 1 else ""} linked to it. Please delete or move those products first.', 'error')
+                    flash(f'Cannot delete "{cat.name}" — it has {product_count} product{"s" if product_count != 1 else ""} linked to it.', 'error')
                 else:
                     db.session.delete(cat)
                     db.session.commit()
@@ -682,23 +664,26 @@ def admin_products():
             cropped_data = request.form.get('cropped_image_data')
             image_path   = None
             if cropped_data and cropped_data.startswith('data:image'):
-                import base64, re
+                import base64, re, io
                 match = re.match(r'data:image/(\w+);base64,(.*)', cropped_data, re.DOTALL)
                 if match:
-                    ext = match.group(1); img_data = base64.b64decode(match.group(2))
-                    ts  = datetime.now().strftime('%Y%m%d_%H%M%S_')
-                    fn  = f'{ts}cropped.{ext}'
-                    path = os.path.join(app.config['UPLOAD_FOLDER'], 'products')
-                    os.makedirs(path, exist_ok=True)
-                    with open(os.path.join(path, fn), 'wb') as fw: fw.write(img_data)
-                    image_path = f'uploads/products/{fn}'
+                    ext = match.group(1)
+                    img_data = base64.b64decode(match.group(2))
+                    # Upload base64 image to Cloudinary
+                    try:
+                        result = cloudinary.uploader.upload(
+                            io.BytesIO(img_data),
+                            folder="sripavani/products",
+                            resource_type="image"
+                        )
+                        image_path = result["secure_url"]
+                    except Exception as e:
+                        print(f"Cloudinary cropped upload error: {e}")
             else:
                 image_file = request.files.get('image')
                 image_path = save_file(image_file, 'products') if image_file else None
 
-            # Get selected category IDs (multiple checkboxes)
             category_ids = request.form.getlist('category_ids')
-
             p = Product(
                 name=request.form.get('name'),
                 description=request.form.get('description'),
@@ -708,12 +693,10 @@ def admin_products():
                 is_new_collection='is_new_collection' in request.form,
                 is_best_seller='is_best_seller' in request.form
             )
-            # Assign categories
             for cid in category_ids:
                 cat = Category.query.get(int(cid))
                 if cat:
                     p.categories.append(cat)
-
             db.session.add(p)
             db.session.commit()
             flash('Product added!', 'success')
@@ -832,79 +815,12 @@ def seed_data():
     db.session.add(Offer(title='Grand Diwali Sale', subtitle='Up to 30% off on all jewellery', is_active=True, height_size='medium'))
     db.session.commit()
 
-def migrate_existing_products():
-    """
-    One-time migration: copy legacy category_id into the many-to-many table
-    for any products that already exist but have no entries in product_categories.
-    """
-    products = Product.query.all()
-    changed = False
-    for p in products:
-        if p.category_id and not p.categories:
-            cat = Category.query.get(p.category_id)
-            if cat and cat not in p.categories:
-                p.categories.append(cat)
-                changed = True
-    if changed:
-        db.session.commit()
-
 with app.app_context():
     db.create_all()
-    # Run legacy column migrations (safe to re-run — errors are suppressed)
-    for sql in [
-        "ALTER TABLE offer ADD COLUMN height_size VARCHAR(20) DEFAULT 'medium'",
-        "ALTER TABLE offer ADD COLUMN sort_order INTEGER DEFAULT 0",
-        "ALTER TABLE \"order\" ADD COLUMN estimated_delivery VARCHAR(100) DEFAULT '5-7 business days'",
-        "ALTER TABLE \"order\" ADD COLUMN admin_note TEXT",
-        "ALTER TABLE cart_item ADD COLUMN size_id INTEGER REFERENCES product_size(id)",
-        "ALTER TABLE order_item ADD COLUMN size_name VARCHAR(100)",
-    ]:
-        try:
-            db.session.execute(db.text(sql)); db.session.commit()
-        except:
-            pass
-
-    # ── Fix: make product.category_id nullable in existing SQLite databases ──
-    # SQLite does not support ALTER COLUMN, so we rebuild the product table
-    # only if the column is still NOT NULL (detected by checking the schema).
-    try:
-        result = db.session.execute(db.text("SELECT sql FROM sqlite_master WHERE type='table' AND name='product'")).fetchone()
-        if result and 'category_id INTEGER NOT NULL' in result[0]:
-            # Rebuild product table without NOT NULL on category_id
-            db.session.execute(db.text("PRAGMA foreign_keys=OFF"))
-            db.session.execute(db.text("""
-                CREATE TABLE IF NOT EXISTS product_new (
-                    id INTEGER NOT NULL PRIMARY KEY,
-                    name VARCHAR(200) NOT NULL,
-                    description TEXT,
-                    price FLOAT NOT NULL,
-                    weight FLOAT,
-                    image VARCHAR(200),
-                    category_id INTEGER REFERENCES category(id),
-                    is_new_collection BOOLEAN DEFAULT 0,
-                    is_best_seller BOOLEAN DEFAULT 0,
-                    is_stock_out BOOLEAN DEFAULT 0,
-                    is_active BOOLEAN DEFAULT 1,
-                    created_at DATETIME
-                )
-            """))
-            db.session.execute(db.text("""
-                INSERT INTO product_new
-                SELECT id, name, description, price, weight, image, category_id,
-                       is_new_collection, is_best_seller, is_stock_out, is_active, created_at
-                FROM product
-            """))
-            db.session.execute(db.text("DROP TABLE product"))
-            db.session.execute(db.text("ALTER TABLE product_new RENAME TO product"))
-            db.session.execute(db.text("PRAGMA foreign_keys=ON"))
-            db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        print(f"Migration warning: {e}")
-
     seed_data()
-    migrate_existing_products()
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('FLASK_ENV', 'production') == 'development'
+    app.run(host='0.0.0.0', port=port, debug=debug)
